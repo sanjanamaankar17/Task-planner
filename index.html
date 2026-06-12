@@ -1580,6 +1580,7 @@ kbd {
     <div class="confirm-dialog" id="confirm-dialog"></div>
   </div>
 
+  <input type="file" id="import-input" accept=".json" style="display:none">
   <div id="toast-container"></div>
   <div class="confetti-container" id="confetti-container"></div>
 
@@ -2097,6 +2098,10 @@ const App = (() => {
           <label class="form-label" for="s-role">Your Role</label>
           <input type="text" class="form-input" id="s-role" value="${escHtml(state.userRole)}" placeholder="e.g. ETL & AI Developer">
         </div>
+        <div style="display:flex;gap:8px;margin:16px 0;">
+          <button type="button" class="btn btn-secondary" id="export-btn" style="flex:1;">Export Tasks</button>
+          <button type="button" class="btn btn-secondary" id="import-btn" style="flex:1;">Import Tasks</button>
+        </div>
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" id="modal-cancel">Cancel</button>
           <button type="submit" class="btn btn-primary">Save</button>
@@ -2118,6 +2123,8 @@ const App = (() => {
       closeModal();
       render();
     });
+    document.getElementById('export-btn')?.addEventListener('click', exportTasks);
+    document.getElementById('import-btn')?.addEventListener('click', () => document.getElementById('import-input')?.click());
     document.addEventListener('keydown', handleModalKeydown);
   }
 
@@ -2712,6 +2719,55 @@ const App = (() => {
     return div.innerHTML;
   }
 
+  // ===== Export / Import =====
+
+  function exportTasks() {
+    const data = JSON.stringify({
+      tasks: state.tasks,
+      topPriorityIds: state.topPriorityIds,
+      userName: state.userName,
+      userRole: state.userRole,
+      taskIdCounter
+    }, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tasks-${todayStr()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Tasks exported', 'success');
+  }
+
+  function importTasks() {
+    const input = document.getElementById('import-input');
+    const file = input?.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (data.tasks && Array.isArray(data.tasks)) {
+          state.tasks = data.tasks;
+          if (data.topPriorityIds) state.topPriorityIds = data.topPriorityIds;
+          if (data.userName) state.userName = data.userName;
+          if (data.userRole) state.userRole = data.userRole;
+          if (data.taskIdCounter) taskIdCounter = data.taskIdCounter;
+          saveState();
+          closeModal();
+          render();
+          showToast(`Imported ${data.tasks.length} tasks`, 'success');
+        } else {
+          showToast('Invalid file format', 'error');
+        }
+      } catch (err) {
+        showToast('Failed to import: ' + err.message, 'error');
+      }
+    };
+    reader.readAsText(file);
+    input.value = '';
+  }
+
   // ===== Init =====
 
   function init() {
@@ -2763,6 +2819,8 @@ const App = (() => {
     document.getElementById('add-task-btn')?.addEventListener('click', openAddModal);
 
     document.querySelector('.profile-card')?.addEventListener('click', openSettings);
+
+    document.getElementById('import-input')?.addEventListener('change', importTasks);
 
     document.addEventListener('keydown', e => {
       if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !e.target.closest('input,textarea,select')) {
