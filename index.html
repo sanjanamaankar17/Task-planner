@@ -1484,6 +1484,19 @@ kbd {
         Don't have an account? <a href="#" id="auth-toggle" style="color:var(--primary,#8b7cf7);text-decoration:none;font-weight:500;">Sign Up</a>
       </div>
     </div>
+    <div id="verify-section" style="display:none;background:var(--bg-secondary,#fff);border-radius:20px;padding:40px;width:380px;max-width:92vw;box-shadow:var(--shadow-lg,0 8px 32px rgba(139,124,247,0.12));text-align:center;">
+      <div style="font-size:2rem;margin-bottom:12px;">📧</div>
+      <div style="font-size:1.1rem;font-weight:600;color:var(--text-primary,#2d2640);margin-bottom:8px;">Verify your email</div>
+      <div style="font-size:0.85rem;color:var(--text-muted,#7a7396);margin-bottom:20px;line-height:1.5;">
+        We sent a verification email.<br>Click the link in the email, then come back and click below.
+      </div>
+      <div id="verify-error" style="color:var(--danger,#e8829a);font-size:0.8rem;margin-bottom:12px;display:none;"></div>
+      <button id="verify-check" style="width:100%;padding:10px;background:var(--primary,#8b7cf7);color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;margin-bottom:8px;">I've verified — check now</button>
+      <button id="verify-resend" style="width:100%;padding:8px;background:transparent;color:var(--primary,#8b7cf7);border:1px solid var(--border-color,#e8e4f0);border-radius:8px;font-size:0.82rem;font-weight:500;font-family:Inter,sans-serif;cursor:pointer;">Resend email</button>
+      <div style="margin-top:14px;font-size:0.82rem;color:var(--text-muted,#7a7396);">
+        <a href="#" id="verify-back" style="color:var(--primary,#8b7cf7);text-decoration:none;font-weight:500;">Back to sign in</a>
+      </div>
+    </div>
   </div>
   <div id="app" style="display:none;">
     <aside id="sidebar">
@@ -2914,6 +2927,44 @@ const App = (() => {
     el.style.display = 'block';
   }
 
+  function showVerifyScreen() {
+    document.querySelector('#auth-screen > div:first-child').style.display = 'none';
+    document.getElementById('verify-section').style.display = 'block';
+  }
+
+  function hideVerifyScreen() {
+    document.querySelector('#auth-screen > div:first-child').style.display = 'block';
+    document.getElementById('verify-section').style.display = 'none';
+  }
+
+  function sendVerificationEmail(user) {
+    user.sendEmailVerification().catch(() => {});
+  }
+
+  function checkEmailVerified() {
+    const user = auth.currentUser;
+    if (!user) return;
+    const btn = document.getElementById('verify-check');
+    btn.disabled = true;
+    btn.textContent = 'Checking...';
+    user.reload().then(() => {
+      if (user.emailVerified) {
+        currentUser = user;
+        hideAuth();
+        loadState();
+        initApp();
+      } else {
+        document.getElementById('verify-error').textContent = 'Not verified yet. Check your email and click the link.';
+        document.getElementById('verify-error').style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = "I've verified — check now";
+      }
+    }).catch(() => {
+      btn.disabled = false;
+      btn.textContent = "I've verified — check now";
+    });
+  }
+
   function handleAuthSubmit(e) {
     e.preventDefault();
     const email = document.getElementById('auth-email').value;
@@ -2934,8 +2985,12 @@ const App = (() => {
       ? auth.createUserWithEmailAndPassword(email, password)
       : auth.signInWithEmailAndPassword(email, password);
 
-    promise.then(() => {
+    promise.then(result => {
       document.getElementById('auth-submit').disabled = false;
+      if (isSignUp && result.user) {
+        sendVerificationEmail(result.user);
+        showVerifyScreen();
+      }
     }).catch(err => {
       handleAuthError(err);
       document.getElementById('auth-submit').disabled = false;
@@ -2960,15 +3015,38 @@ const App = (() => {
       pw.type = isPw ? 'text' : 'password';
       document.getElementById('pw-toggle').textContent = isPw ? '👁‍🗨' : '👁';
     });
+    document.getElementById('verify-check')?.addEventListener('click', checkEmailVerified);
+    document.getElementById('verify-resend')?.addEventListener('click', () => {
+      const user = auth.currentUser;
+      if (user) {
+        sendVerificationEmail(user);
+        document.getElementById('verify-error').textContent = 'Verification email sent!';
+        document.getElementById('verify-error').style.display = 'block';
+        document.getElementById('verify-error').style.color = 'var(--success,#7bc9a0)';
+      }
+    });
+    document.getElementById('verify-back')?.addEventListener('click', e => {
+      e.preventDefault();
+      auth.signOut();
+    });
 
     auth.onAuthStateChanged(user => {
-      currentUser = user;
       if (user) {
-        hideAuth();
-        loadState();
-        initApp();
+        user.reload().then(() => {
+          if (!user.emailVerified) {
+            showAuth();
+            showVerifyScreen();
+            return;
+          }
+          currentUser = user;
+          hideAuth();
+          loadState();
+          initApp();
+        });
       } else {
+        currentUser = null;
         showAuth();
+        hideVerifyScreen();
       }
     });
   }
