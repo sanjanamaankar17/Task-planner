@@ -1867,7 +1867,7 @@ const App = (() => {
     } else {
       switch (state.view) {
         case 'today':
-          tasks = tasks.filter(t => t.dueDate === today);
+          tasks = tasks.filter(t => t.dueDate === today || t.status === 'in-progress');
           break;
         case 'overdue':
           tasks = tasks.filter(t => isOverdue(t));
