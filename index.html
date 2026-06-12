@@ -1007,6 +1007,21 @@ body {
 
 .cal-month-select:hover, .cal-year-select:hover { border-color: var(--primary); }
 
+.cal-today-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-family: Inter, sans-serif;
+  font-weight: 600;
+  padding: 3px 10px;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.cal-today-btn:hover { opacity: 0.85; }
+
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -2269,6 +2284,7 @@ const App = (() => {
       <select class="cal-year-select" id="cal-year-select">
         ${Array.from({length: 11}, (_,i) => year - 5 + i).map(y => `<option value="${y}" ${y === year ? 'selected' : ''}>${y}</option>`).join('')}
       </select>
+      <button class="cal-today-btn" id="cal-today-btn">Today</button>
     </div><div class="calendar-grid">`;
 
     dayHeaders.forEach(d => { html += `<span class="calendar-day-header">${d}</span>`; });
@@ -2311,6 +2327,21 @@ const App = (() => {
     document.getElementById('cal-year-select')?.addEventListener('change', e => {
       state.calYear = parseInt(e.target.value);
       renderCalendar();
+    });
+    document.getElementById('cal-today-btn')?.addEventListener('click', () => {
+      const now = new Date();
+      state.calMonth = now.getMonth();
+      state.calYear = now.getFullYear();
+      const todayStr = now.toISOString().split('T')[0];
+      state.selectedDate = todayStr;
+      state.view = 'all';
+      state.searchQuery = '';
+      document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector('.sidebar-btn[data-view="all"]')?.classList.add('active');
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) searchInput.value = '';
+      renderCalendar();
+      render();
     });
 
     grid.querySelectorAll('.calendar-day[data-date]').forEach(el => {
