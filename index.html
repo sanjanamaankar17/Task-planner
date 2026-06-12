@@ -1473,7 +1473,10 @@ kbd {
         </div>
         <div style="margin-bottom:20px;">
           <label style="display:block;font-size:0.78rem;font-weight:500;color:var(--text-secondary,#7a7396);margin-bottom:5px;">Password</label>
-          <input type="password" id="auth-password" required style="width:100%;padding:9px 12px;border:1px solid var(--border-color,#e8e4f0);border-radius:8px;font-size:0.88rem;font-family:Inter,sans-serif;color:var(--text-primary,#2d2640);background:var(--bg-primary,#f6f3ff);outline:none;box-sizing:border-box;" placeholder="••••••••">
+          <div style="position:relative;">
+            <input type="password" id="auth-password" required autocomplete="off" style="width:100%;padding:9px 36px 9px 12px;border:1px solid var(--border-color,#e8e4f0);border-radius:8px;font-size:0.88rem;font-family:Inter,sans-serif;color:var(--text-primary,#2d2640);background:var(--bg-primary,#f6f3ff);outline:none;box-sizing:border-box;" placeholder="••••••••">
+            <span id="pw-toggle" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-muted,#a9a2c0);font-size:1.1rem;line-height:1;user-select:none;" title="Show password">👁</span>
+          </div>
         </div>
         <button type="submit" id="auth-submit" style="width:100%;padding:10px;background:var(--primary,#8b7cf7);color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;">Sign In</button>
       </form>
@@ -2915,7 +2918,15 @@ const App = (() => {
     e.preventDefault();
     const email = document.getElementById('auth-email').value;
     const password = document.getElementById('auth-password').value;
-    document.getElementById('auth-error').style.display = 'none';
+    const errorEl = document.getElementById('auth-error');
+    errorEl.style.display = 'none';
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errorEl.textContent = 'Please enter a valid email address';
+      errorEl.style.display = 'block';
+      return;
+    }
+
     document.getElementById('auth-submit').disabled = true;
     document.getElementById('auth-submit').textContent = 'Please wait...';
 
@@ -2943,6 +2954,12 @@ const App = (() => {
 
     document.getElementById('auth-form')?.addEventListener('submit', handleAuthSubmit);
     document.getElementById('auth-toggle')?.addEventListener('click', e => { e.preventDefault(); toggleAuthMode(); });
+    document.getElementById('pw-toggle')?.addEventListener('click', () => {
+      const pw = document.getElementById('auth-password');
+      const isPw = pw.type === 'password';
+      pw.type = isPw ? 'text' : 'password';
+      document.getElementById('pw-toggle').textContent = isPw ? '👁‍🗨' : '👁';
+    });
 
     auth.onAuthStateChanged(user => {
       currentUser = user;
