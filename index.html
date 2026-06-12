@@ -1594,6 +1594,25 @@ kbd {
 const App = (() => {
   const STORAGE_KEY = 'task-planner-data';
 
+  function setCookie(key, value, days) {
+    try {
+      const d = new Date();
+      d.setDate(d.getDate() + (days || 365));
+      document.cookie = key + '=' + encodeURIComponent(value) + ';expires=' + d.toUTCString() + ';path=/;SameSite=Lax';
+    } catch (e) { /* ignore */ }
+  }
+
+  function getCookie(key) {
+    try {
+      const match = document.cookie.match(new RegExp('(^| )' + key + '=([^;]+)'));
+      return match ? decodeURIComponent(match[2]) : null;
+    } catch (e) { return null; }
+  }
+
+  function deleteCookie(key) {
+    document.cookie = key + '=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/';
+  }
+
   // ===== SVG Helpers =====
   function iconCompleted(sz) {
     sz = sz || 14;
@@ -1784,9 +1803,13 @@ const App = (() => {
   }
 
   function loadState() {
+    let raw = null;
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
+      raw = localStorage.getItem(STORAGE_KEY);
+    } catch (e) { /* ignore */ }
+    if (!raw) raw = getCookie(STORAGE_KEY);
+    if (raw) {
+      try {
         const saved = JSON.parse(raw);
         state.tasks = saved.tasks || [];
         state.view = saved.view || 'today';
@@ -1799,9 +1822,9 @@ const App = (() => {
         if (saved.sortBy) state.sortBy = saved.sortBy;
         if (saved.filterPriority) state.filterPriority = saved.filterPriority;
         if (saved.filterStatus) state.filterStatus = saved.filterStatus;
+      } catch (e) {
+        console.warn('Failed to load state:', e);
       }
-    } catch (e) {
-      console.warn('Failed to load state:', e);
     }
     if (!state.tasks || state.tasks.length === 0) {
       state.tasks = [];
@@ -1810,23 +1833,27 @@ const App = (() => {
   }
 
   function saveState() {
+    const data = JSON.stringify({
+      tasks: state.tasks,
+      view: state.view,
+      darkMode: state.darkMode,
+      topPriorityIds: state.topPriorityIds,
+      userName: state.userName,
+      userRole: state.userRole,
+      searchQuery: state.searchQuery,
+      sortBy: state.sortBy,
+      filterPriority: state.filterPriority,
+      filterStatus: state.filterStatus,
+      taskIdCounter
+    });
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        tasks: state.tasks,
-        view: state.view,
-        darkMode: state.darkMode,
-        topPriorityIds: state.topPriorityIds,
-        userName: state.userName,
-        userRole: state.userRole,
-        searchQuery: state.searchQuery,
-        sortBy: state.sortBy,
-        filterPriority: state.filterPriority,
-        filterStatus: state.filterStatus,
-        taskIdCounter
-      }));
+      localStorage.setItem(STORAGE_KEY, data);
     } catch (e) {
-      console.warn('Failed to save state:', e);
+      console.warn('localStorage save failed:', e);
     }
+    try {
+      setCookie(STORAGE_KEY, data, 365);
+    } catch (e) { /* ignore */ }
   }
 
   function generateId() {
