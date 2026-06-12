@@ -882,12 +882,12 @@ body {
 .reschedule-input {
   border: none;
   background: none;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-family: var(--font);
   color: var(--primary);
   cursor: pointer;
   outline: none;
-  max-width: 100px;
+  max-width: 150px;
 }
 
 .reschedule-input::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.5; }
@@ -2079,13 +2079,16 @@ const App = (() => {
 
   function isToday(dateStr) {
     if (!dateStr) return false;
-    const d = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
-    return d === todayStr();
+    return dateOnly(dateStr) === todayStr();
+  }
+
+  function dateOnly(d) {
+    return d && d.includes('T') ? d.split('T')[0] : d;
   }
 
   function sameDay(dateStr, dayStr) {
     if (!dateStr || !dayStr) return false;
-    return (dateStr.includes('T') ? dateStr.split('T')[0] : dateStr) === dayStr;
+    return dateOnly(dateStr) === dayStr;
   }
 
 
@@ -2123,7 +2126,7 @@ const App = (() => {
           tasks = tasks.filter(t => isOverdue(t));
           break;
         case 'upcoming':
-          tasks = tasks.filter(t => t.dueDate && t.dueDate > today && t.status !== 'completed');
+          tasks = tasks.filter(t => t.dueDate && dateOnly(t.dueDate) > today && t.status !== 'completed');
           break;
         case 'completed':
           tasks = tasks.filter(t => t.status === 'completed');
@@ -2144,7 +2147,10 @@ const App = (() => {
         case 'dueDate':
           if (!a.dueDate) return 1;
           if (!b.dueDate) return -1;
-          return a.dueDate.localeCompare(b.dueDate);
+          const da = dateOnly(a.dueDate);
+          const db = dateOnly(b.dueDate);
+          if (da !== db) return da.localeCompare(db);
+          return (a.dueDate || '').localeCompare(b.dueDate || '');
         case 'status': {
           const sOrder = { 'not-started': 0, 'in-progress': 1, 'blocked': 2, 'completed': 3 };
           const sa = sOrder[a.status] ?? 0;
@@ -2465,7 +2471,7 @@ const App = (() => {
     const allTasks = state.tasks;
 
     // Upcoming
-    const upcoming = allTasks.filter(t => t.dueDate && t.dueDate >= today && t.status !== 'completed')
+    const upcoming = allTasks.filter(t => t.dueDate && dateOnly(t.dueDate) >= today && t.status !== 'completed')
       .sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 5);
     const upcomingCount = document.getElementById('upcoming-count');
     const upcomingList = document.getElementById('upcoming-list');
@@ -2878,12 +2884,8 @@ const App = (() => {
         </div>
       </form>
     `;
-    const dueInput = document.getElementById('f-due');
-    if (dueInput && !dueInput.value) {
-      const now = new Date();
-      const pad = n => String(n).padStart(2, '0');
-      dueInput.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    }
+    const dueDef = document.getElementById('f-due');
+    if (dueDef && !dueDef.value) dueDef.value = todayStr() + 'T00:00';
     overlay.classList.add('open');
     setupModalEvents();
   }
@@ -3006,12 +3008,14 @@ const App = (() => {
 
   function handleFormSubmit(e) {
     e.preventDefault();
+    let dueVal = document.getElementById('f-due').value;
+    if (dueVal && dueVal.endsWith('T00:00')) dueVal = dueVal.split('T')[0];
     const data = {
       title: document.getElementById('f-title').value,
       notes: document.getElementById('f-notes').value,
       project: document.getElementById('f-project').value,
       startDate: document.getElementById('f-start').value,
-      dueDate: document.getElementById('f-due').value,
+      dueDate: dueVal,
       priority: document.getElementById('f-priority').value,
       status: document.getElementById('f-status').value,
       estimatedTime: parseEstimate(document.getElementById('f-estimate').value),
