@@ -1625,6 +1625,12 @@ kbd {
         </div>
         <div class="widget-body" id="categories-list"></div>
       </div>
+      <div class="widget" id="admin-stats" style="display:none;">
+        <div class="widget-header">
+          <span class="widget-title">Admin</span>
+        </div>
+        <div class="widget-body" id="admin-stats-body"></div>
+      </div>
     </aside>
   </div>
   <div class="modal-overlay" id="modal-overlay">
@@ -2080,6 +2086,7 @@ const App = (() => {
     renderTaskList();
     renderRightWidgets();
     renderBottomStrip();
+    renderAdminStats();
     updateDarkMode();
   }
 
@@ -2856,8 +2863,21 @@ const App = (() => {
     try { setCookie(STORAGE_KEY, json, 365); } catch(e) {}
   }
 
+  function ensureUserMeta() {
+    if (!currentUser) return;
+    db.collection('userMeta').doc(currentUser.uid).get().then(doc => {
+      if (!doc.exists) {
+        db.collection('userMeta').doc(currentUser.uid).set({
+          email: currentUser.email,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(() => {});
+      }
+    }).catch(() => {});
+  }
+
   function loadFromFirestore() {
     if (!currentUser) return;
+    ensureUserMeta();
     db.collection('users').doc(currentUser.uid).get().then(doc => {
       if (doc.exists) {
         applyState(doc.data());
@@ -2880,6 +2900,22 @@ const App = (() => {
       taskIdCounter,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }).catch(err => console.warn('Firestore save error:', err));
+  }
+
+  function isAdmin() {
+    return currentUser && currentUser.email === 'sanjanamaankar17@gmail.com';
+  }
+
+  function renderAdminStats() {
+    const el = document.getElementById('admin-stats');
+    if (!el) return;
+    if (!isAdmin()) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    db.collection('userMeta').get().then(snap => {
+      el.innerHTML = `<div style="font-size:0.78rem;color:var(--text-muted);padding:8px 0;">Total users: <strong>${snap.size}</strong></div>`;
+    }).catch(() => {
+      el.innerHTML = `<div style="font-size:0.78rem;color:var(--text-muted);padding:8px 0;">Total users: <strong>?</strong></div>`;
+    });
   }
 
   function saveState() {
