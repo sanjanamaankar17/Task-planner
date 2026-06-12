@@ -119,11 +119,18 @@ body {
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   padding: 28px 16px 20px;
   position: sticky;
   top: 0;
   height: 100vh;
+}
+
+#sidebar .sidebar-inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  min-height: 0;
 }
 
 .sidebar-brand {
