@@ -229,10 +229,101 @@ body {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: box-shadow 0.2s, transform 0.2s;
+  transition: box-shadow 0.2s, transform 0.2s, padding 0.25s, gap 0.25s;
 }
 
 .profile-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+
+.sidebar-collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  width: 100%;
+  margin-top: 8px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.sidebar-collapse-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+
+.sidebar-collapse-btn svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.25s;
+}
+
+#sidebar.collapsed .sidebar-collapse-btn svg { transform: rotate(180deg); }
+
+/* ===== Collapsed Sidebar ===== */
+#sidebar.collapsed {
+  width: 56px;
+  padding: 20px 8px;
+}
+
+#sidebar.collapsed .sidebar-title,
+#sidebar.collapsed .sidebar-btn span,
+#sidebar.collapsed .profile-info,
+#sidebar.collapsed .profile-settings {
+  display: none;
+}
+
+#sidebar.collapsed .sidebar-brand { padding: 0; justify-content: center; margin-bottom: 24px; }
+#sidebar.collapsed .sidebar-btn { padding: 10px; justify-content: center; margin-left: 0; border-radius: var(--radius-md); }
+#sidebar.collapsed .sidebar-btn.active::before { display: none; }
+#sidebar.collapsed .sidebar-btn.active { background: var(--primary-light); }
+#sidebar.collapsed .sidebar-nav { gap: 2px; }
+
+#sidebar.collapsed .profile-card { padding: 8px; justify-content: center; gap: 0; }
+#sidebar.collapsed .sidebar-bottom { border-top: none; padding-top: 8px; }
+
+/* Tooltip for collapsed nav */
+#sidebar.collapsed .sidebar-btn {
+  position: relative;
+}
+
+#sidebar.collapsed .sidebar-btn::after {
+  content: attr(data-tooltip);
+  position: fixed;
+  left: 62px;
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 100;
+}
+
+#sidebar.collapsed .sidebar-btn:hover::after { opacity: 1; }
+
+/* Hover expand on collapsed sidebar */
+#sidebar.collapsed.hover-expand {
+  width: 220px;
+  padding: 20px 16px;
+}
+
+#sidebar.collapsed.hover-expand .sidebar-title,
+#sidebar.collapsed.hover-expand .sidebar-btn span,
+#sidebar.collapsed.hover-expand .profile-info,
+#sidebar.collapsed.hover-expand .profile-settings { display: inline; }
+
+#sidebar.collapsed.hover-expand .sidebar-brand { padding: 0 8px; justify-content: flex-start; }
+#sidebar.collapsed.hover-expand .sidebar-btn { padding: 10px 12px 10px 16px; justify-content: flex-start; margin-left: -4px; border-radius: 0; }
+#sidebar.collapsed.hover-expand .sidebar-btn.active::before { display: block; }
+#sidebar.collapsed.hover-expand .sidebar-btn.active { background: var(--primary-light); }
+#sidebar.collapsed.hover-expand .sidebar-nav { gap: 4px; }
+#sidebar.collapsed.hover-expand .profile-card { padding: 12px; justify-content: flex-start; gap: 10px; }
+#sidebar.collapsed.hover-expand .sidebar-bottom { border-top: 1px solid var(--border-color); padding-top: 16px; }
+#sidebar.collapsed.hover-expand .sidebar-btn::after { display: none; }
 
 .profile-avatar {
   width: 36px;
@@ -1555,6 +1646,39 @@ kbd {
   .top-card { padding: 16px 18px; }
 }
 
+@media (max-width: 820px) {
+  #sidebar { width: 56px; padding: 20px 8px; }
+  #sidebar .sidebar-title,
+  #sidebar .sidebar-btn span,
+  #sidebar .profile-info,
+  #sidebar .profile-settings { display: none; }
+  #sidebar .sidebar-brand { padding: 0; justify-content: center; margin-bottom: 24px; }
+  #sidebar .sidebar-btn { padding: 10px; justify-content: center; margin-left: 0; border-radius: var(--radius-md); }
+  #sidebar .sidebar-btn.active::before { display: none; }
+  #sidebar .sidebar-btn.active { background: var(--primary-light); }
+  #sidebar .sidebar-nav { gap: 2px; }
+  #sidebar .profile-card { padding: 8px; justify-content: center; gap: 0; }
+  #sidebar .sidebar-bottom { border-top: none; padding-top: 8px; }
+  #sidebar .sidebar-collapse-btn { display: none; }
+  #sidebar .sidebar-btn::after {
+    content: attr(data-tooltip);
+    position: fixed;
+    left: 62px;
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    z-index: 100;
+  }
+  #sidebar .sidebar-btn:hover::after { opacity: 1; }
+}
+
 @media (max-width: 768px) {
   .hamburger { display: flex; }
 
@@ -1658,23 +1782,23 @@ kbd {
           <span class="sidebar-title">Planner</span>
         </div>
         <nav id="sidebar-nav" class="sidebar-nav">
-          <button class="sidebar-btn active" data-view="today">
+          <button class="sidebar-btn active" data-view="today" data-tooltip="Today">
             <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6.5"/><line x1="9" y1="5" x2="9" y2="9"/><line x1="9" y1="9" x2="12" y2="9"/></svg>
             Today
           </button>
-          <button class="sidebar-btn" data-view="overdue">
+          <button class="sidebar-btn" data-view="overdue" data-tooltip="Overdue">
             <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6.5"/><line x1="9" y1="5" x2="9" y2="9"/><line x1="9" y1="9" x2="6" y2="9"/></svg>
             Overdue
           </button>
-          <button class="sidebar-btn" data-view="upcoming">
+          <button class="sidebar-btn" data-view="upcoming" data-tooltip="Upcoming">
             <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6.5"/><line x1="9" y1="5" x2="9" y2="9"/><line x1="9" y1="9" x2="12" y2="12"/></svg>
             Upcoming
           </button>
-          <button class="sidebar-btn" data-view="completed">
+          <button class="sidebar-btn" data-view="completed" data-tooltip="Completed">
             <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9.5L7.5 12L13 6.5"/><circle cx="9" cy="9" r="6.5"/></svg>
             Completed
           </button>
-          <button class="sidebar-btn" data-view="all">
+          <button class="sidebar-btn" data-view="all" data-tooltip="All Tasks">
             <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="12" height="12" rx="2"/><line x1="3" y1="8" x2="15" y2="8"/><line x1="8" y1="3" x2="8" y2="15"/></svg>
             All Tasks
           </button>
@@ -1689,6 +1813,9 @@ kbd {
           </div>
           <button class="profile-settings" id="dark-mode-toggle" title="Toggle theme">☾</button>
         </div>
+        <button class="sidebar-collapse-btn" id="sidebar-collapse" title="Collapse sidebar">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="10,3 5,8 10,13"/></svg>
+        </button>
       </div>
       </div>
     </aside>
@@ -3242,6 +3369,7 @@ const App = (() => {
     const hamburger = document.getElementById('hamburger');
     const sidebar = document.getElementById('sidebar');
     const backdrop = document.getElementById('sidebar-backdrop');
+    const collapseBtn = document.getElementById('sidebar-collapse');
     function closeSidebar() { sidebar?.classList.remove('open'); hamburger?.classList.remove('open'); backdrop?.classList.remove('open'); }
     hamburger?.addEventListener('click', () => {
       sidebar?.classList.toggle('open');
@@ -3249,6 +3377,22 @@ const App = (() => {
       backdrop?.classList.toggle('open');
     });
     backdrop?.addEventListener('click', closeSidebar);
+    collapseBtn?.addEventListener('click', () => {
+      sidebar?.classList.toggle('collapsed');
+      sidebar?.classList.remove('hover-expand');
+    });
+    let collapseTimer;
+    sidebar?.addEventListener('mouseenter', () => {
+      if (sidebar.classList.contains('collapsed')) {
+        clearTimeout(collapseTimer);
+        sidebar.classList.add('hover-expand');
+      }
+    });
+    sidebar?.addEventListener('mouseleave', () => {
+      if (sidebar.classList.contains('collapsed')) {
+        collapseTimer = setTimeout(() => sidebar.classList.remove('hover-expand'), 200);
+      }
+    });
     document.querySelectorAll('.sidebar-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         state.view = btn.dataset.view;
