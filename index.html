@@ -1019,24 +1019,29 @@ body {
 .calendar-day {
   font-size: 0.7rem;
   color: var(--text-secondary);
-  padding: 4px 0;
   border-radius: 50%;
-  cursor: default;
-  width: 24px;
-  height: 24px;
+  cursor: pointer;
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto;
+  margin: 1px auto;
+  position: relative;
+  transition: background 0.15s, color 0.15s;
 }
 
-.calendar-day.today {
-  background: var(--primary);
-  color: #fff;
-  font-weight: 600;
-}
-
-.calendar-day.other-month { color: var(--text-muted); opacity: 0.3; }
+.calendar-day:hover { background: var(--bg-hover); }
+.calendar-day.today { background: var(--primary); color: #fff; font-weight: 600; }
+.calendar-day.today:hover { background: var(--primary); opacity: 0.9; }
+.calendar-day.selected { outline: 2px solid var(--primary); outline-offset: -2px; }
+.calendar-day.selected.today { outline-color: #fff; }
+.calendar-day.other-month { color: var(--text-muted); opacity: 0.3; pointer-events: none; }
+.calendar-day .task-dot { position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; }
+.calendar-day .task-dot.due { background: var(--danger, #e8829a); }
+.calendar-day .task-dot.start { background: var(--accent-blue, #7ba9e8); }
+.calendar-day .task-dot.assigned { background: var(--accent-mint, #7bc9a0); }
+.calendar-day .task-dot.multi { width: 6px; height: 6px; background: var(--primary); }
 
 /* Categories widget */
 .category-item {
@@ -1741,7 +1746,10 @@ const App = (() => {
     darkMode: false,
     topPriorityIds: [],
     userName: 'User',
-    userRole: 'ETL & AI Developer'
+    userRole: 'ETL & AI Developer',
+    selectedDate: null,
+    calMonth: new Date().getMonth(),
+    calYear: new Date().getFullYear()
   };
 
   let editingTaskId = null;
@@ -1826,21 +1834,25 @@ const App = (() => {
       return true;
     });
 
-    switch (state.view) {
-      case 'today':
-        tasks = tasks.filter(t => t.dueDate === today);
-        break;
-      case 'overdue':
-        tasks = tasks.filter(t => isOverdue(t));
-        break;
-      case 'upcoming':
-        tasks = tasks.filter(t => t.dueDate && t.dueDate > today && t.status !== 'completed');
-        break;
-      case 'completed':
-        tasks = tasks.filter(t => t.status === 'completed');
-        break;
-      case 'all':
-        break;
+    if (state.selectedDate) {
+      tasks = tasks.filter(t => t.dueDate === state.selectedDate || t.startDate === state.selectedDate || t.assignedDate === state.selectedDate);
+    } else {
+      switch (state.view) {
+        case 'today':
+          tasks = tasks.filter(t => t.dueDate === today);
+          break;
+        case 'overdue':
+          tasks = tasks.filter(t => isOverdue(t));
+          break;
+        case 'upcoming':
+          tasks = tasks.filter(t => t.dueDate && t.dueDate > today && t.status !== 'completed');
+          break;
+        case 'completed':
+          tasks = tasks.filter(t => t.status === 'completed');
+          break;
+        case 'all':
+          break;
+      }
     }
 
     tasks.sort((a, b) => {
@@ -2219,20 +2231,38 @@ const App = (() => {
   function renderCalendar() {
     const grid = document.getElementById('calendar-grid');
     if (!grid) return;
+    const year = state.calYear;
+    const month = state.calMonth;
     const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
     const today = now.getDate();
+    const isCurrentMonth = month === now.getMonth() && year === now.getFullYear();
 
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const daysInPrev = new Date(year, month, 0).getDate();
 
-    const monthName = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const monthName = new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     const dayHeaders = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+    const taskDates = new Map();
+    state.tasks.forEach(t => {
+      [t.dueDate, t.startDate, t.assignedDate].forEach(d => {
+        if (d) {
+          const key = d.slice(0, 7);
+          if (key === `${year}-${String(month + 1).padStart(2, '0')}`) {
+            if (!taskDates.has(d)) taskDates.set(d, []);
+            taskDates.get(d).push(d === t.dueDate ? 'due' : d === t.startDate ? 'start' : 'assigned');
+          }
+        }
+      });
+    });
 
     let html = `<div class="calendar-header">
       <span class="calendar-month">${monthName}</span>
+      <span>
+        <button class="calendar-nav" data-cal-nav="prev">◀</button>
+        <button class="calendar-nav" data-cal-nav="next">▶</button>
+      </span>
     </div><div class="calendar-grid">`;
 
     dayHeaders.forEach(d => { html += `<span class="calendar-day-header">${d}</span>`; });
@@ -2242,7 +2272,21 @@ const App = (() => {
     }
 
     for (let d = 1; d <= daysInMonth; d++) {
-      html += `<span class="calendar-day ${d === today ? 'today' : ''}">${d}</span>`;
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const cls = [];
+      if (isCurrentMonth && d === today) cls.push('today');
+      if (state.selectedDate === dateStr) cls.push('selected');
+      const dots = taskDates.get(dateStr);
+      let dotHtml = '';
+      if (dots && dots.length > 0) {
+        const types = [...new Set(dots)];
+        if (types.length === 1) {
+          dotHtml = `<span class="task-dot ${types[0]}"></span>`;
+        } else {
+          dotHtml = `<span class="task-dot multi"></span>`;
+        }
+      }
+      html += `<span class="calendar-day ${cls.join(' ')}" data-date="${dateStr}">${d}${dotHtml}</span>`;
     }
 
     const totalCells = firstDay + daysInMonth;
@@ -2253,6 +2297,34 @@ const App = (() => {
 
     html += '</div>';
     grid.innerHTML = html;
+
+    grid.querySelectorAll('.calendar-nav').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.calNav === 'prev') {
+          state.calMonth--;
+          if (state.calMonth < 0) { state.calMonth = 11; state.calYear--; }
+        } else {
+          state.calMonth++;
+          if (state.calMonth > 11) { state.calMonth = 0; state.calYear++; }
+        }
+        renderCalendar();
+      });
+    });
+
+    grid.querySelectorAll('.calendar-day[data-date]').forEach(el => {
+      el.addEventListener('click', () => {
+        const date = el.dataset.date;
+        state.selectedDate = date;
+        state.view = 'all';
+        state.searchQuery = '';
+        document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.sidebar-btn[data-view="all"]')?.classList.add('active');
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) searchInput.value = '';
+        renderCalendar();
+        render();
+      });
+    });
   }
 
   function renderBottomStrip() {
@@ -2810,6 +2882,7 @@ const App = (() => {
     document.querySelectorAll('.sidebar-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         state.view = btn.dataset.view;
+        state.selectedDate = null;
         state.searchQuery = '';
         state.filterPriority = 'all';
         state.filterStatus = 'all';
