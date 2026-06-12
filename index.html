@@ -163,19 +163,22 @@ body {
   font-size: 0.88rem;
   font-weight: 500;
   font-family: var(--font);
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
+  padding: 10px 12px 10px 16px;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   width: 100%;
   text-align: left;
+  position: relative;
+  margin-left: -4px;
 }
 
 .sidebar-btn svg {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  opacity: 0.7;
+  opacity: 0.6;
+  transition: opacity 0.2s;
 }
 
 .sidebar-btn:hover {
@@ -183,15 +186,27 @@ body {
   color: var(--text-primary);
 }
 
+.sidebar-btn:hover svg { opacity: 0.8; }
+
 .sidebar-btn.active {
   background: var(--primary-light);
   color: var(--primary);
   font-weight: 600;
 }
 
-.sidebar-btn.active svg {
-  opacity: 1;
+.sidebar-btn.active::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: var(--primary);
+  border-radius: 0 2px 2px 0;
 }
+
+.sidebar-btn.active svg { opacity: 1; }
 
 .sidebar-bottom {
   padding-top: 16px;
@@ -206,7 +221,11 @@ body {
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s;
 }
+
+.profile-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
 
 .profile-avatar {
   width: 36px;
@@ -271,10 +290,11 @@ body {
 .header-left { flex-shrink: 0; }
 
 .greeting {
-  font-size: 1.4rem;
+  font-size: 1.35rem;
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.03em;
+  line-height: 1.3;
 }
 
 .greeting span { color: var(--primary); }
@@ -606,26 +626,33 @@ body {
   border-radius: var(--radius-md);
   padding: 14px 18px;
   box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.15s, border-color 0.15s;
-  animation: slideUp 0.3s ease both;
+  transition: box-shadow 0.25s, border-color 0.25s, transform 0.25s;
+  animation: cardIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  position: relative;
+  overflow: hidden;
 }
 
-.task-card:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--primary);
+.task-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 3px 0 0 3px;
+  transition: opacity 0.25s;
+  opacity: 0;
 }
 
-.task-card.overdue {
-  border-left: 3px solid var(--accent-pink);
-}
+.task-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-color); transform: translateY(-2px); }
+.task-card:hover::before { opacity: 1; }
 
-.task-card.completed {
-  opacity: 0.55;
-}
+.task-card.overdue { border-left-color: var(--accent-pink); }
+.task-card.overdue::before { background: var(--accent-pink); opacity: 1; }
 
-.task-card.completed:hover {
-  opacity: 0.8;
-}
+.task-card.completed { opacity: 0.55; }
+.task-card.completed:hover { opacity: 0.8; }
+.task-card.completed::before { background: var(--accent-mint); opacity: 1; }
 
 .task-card-header {
   display: flex;
@@ -683,11 +710,12 @@ body {
 .task-content { flex: 1; min-width: 0; }
 
 .task-title {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 500;
   color: var(--text-primary);
-  margin-bottom: 2px;
+  margin-bottom: 3px;
   word-break: break-word;
+  line-height: 1.4;
 }
 
 .task-title.completed-text {
@@ -701,8 +729,9 @@ body {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 4px;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 .task-project {
@@ -746,10 +775,10 @@ body {
 }
 
 .task-notes {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text-secondary);
-  margin-top: 6px;
-  line-height: 1.4;
+  margin-top: 8px;
+  line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -780,12 +809,15 @@ body {
 }
 
 .priority-badge {
-  font-size: 0.65rem;
-  font-weight: 500;
-  padding: 2px 10px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 3px 10px;
   border-radius: 20px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .priority-high { background: var(--accent-pink-light); color: var(--danger); }
@@ -796,31 +828,31 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 4px 8px;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-family: var(--font);
   color: var(--text-primary);
   background: var(--bg-secondary);
   cursor: pointer;
   outline: none;
-  transition: border-color 0.12s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.status-select:focus { border-color: var(--primary); }
+.status-select:focus { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-glow); }
 
 .task-action-btn {
   background: none;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+  padding: 5px;
+  border-radius: 6px;
   font-size: 0.82rem;
-  transition: all 0.12s;
+  transition: all 0.15s;
   line-height: 1;
 }
 
-.task-action-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
-.task-action-btn.danger:hover { color: var(--danger); }
+.task-action-btn:hover { color: var(--text-primary); background: var(--bg-hover); transform: scale(1.1); }
+.task-action-btn.danger:hover { color: var(--danger); background: var(--danger-light); }
 
 .task-card-footer {
   display: flex;
@@ -839,10 +871,12 @@ body {
   cursor: pointer;
   color: var(--text-muted);
   font-size: 0.9rem;
-  padding: 2px 4px;
-  transition: color 0.12s;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.15s;
 }
 
+.important-btn:hover { color: var(--accent-yellow); background: var(--accent-yellow-light); }
 .important-btn.active { color: var(--accent-yellow); }
 
 .reschedule-input {
@@ -1161,7 +1195,7 @@ body {
 }
 
 .btn:hover { transform: translateY(-1px); }
-.btn:active { transform: scale(0.96) !important; } transform: translateY(0); }
+.btn:active { transform: scale(0.96); }
 
 .btn-primary {
   background: var(--primary);
@@ -1186,7 +1220,6 @@ body {
 
 /* ===== Modal ===== */
 .modal-overlay {
-  animation: fadeIn 0.2s ease both;
   position: fixed;
   inset: 0;
   background: rgba(45, 38, 64, 0.3);
@@ -1196,13 +1229,12 @@ body {
   z-index: 1000;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s, visibility 0.2s;
+  transition: opacity 0.25s, visibility 0.25s;
 }
 
 .modal-overlay.open { opacity: 1; visibility: visible; }
 
 .modal {
-  animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
   background: var(--bg-secondary);
   border-radius: var(--radius-xl);
   width: 520px;
@@ -1211,8 +1243,8 @@ body {
   overflow-y: auto;
   padding: 28px 32px;
   box-shadow: var(--shadow-lg);
-  transform: translateY(8px) scale(0.98);
-  transition: transform 0.2s;
+  transform: translateY(10px) scale(0.96);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .modal-overlay.open .modal { transform: translateY(0) scale(1); }
@@ -1444,6 +1476,16 @@ kbd {
 @keyframes cardIn {
   0% { opacity: 0; transform: translateY(12px) scale(0.97); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes modalIn {
+  0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 /* ===== Scrollbar ===== */
@@ -2989,13 +3031,3 @@ document.addEventListener('DOMContentLoaded', () => App.init());
   </script>
 </body>
 </html>
-
-@keyframes modalIn {
-  0% { opacity: 0; transform: scale(0.92) translateY(10px); }
-  100% { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-@keyframes fadeIn {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
-}
