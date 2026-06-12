@@ -1543,6 +1543,7 @@ kbd {
           </div>
           <button class="profile-settings" id="dark-mode-toggle" title="Toggle theme">☾</button>
         </div>
+        <button id="sidebar-logout" style="display:none;width:100%;margin-top:8px;padding:8px;background:var(--danger-light);color:var(--danger);border:none;border-radius:8px;font-size:0.78rem;font-weight:500;font-family:var(--font);cursor:pointer;">Sign Out</button>
       </div>
     </aside>
 
@@ -3067,6 +3068,7 @@ const App = (() => {
     });
 
     auth.onAuthStateChanged(user => {
+      const logoutBtn = document.getElementById('sidebar-logout');
       if (user) {
         user.reload().then(() => {
           if (!user.emailVerified) {
@@ -3075,16 +3077,20 @@ const App = (() => {
             return;
           }
           currentUser = user;
+          if (logoutBtn) logoutBtn.style.display = 'block';
           hideAuth();
           loadState();
           initApp();
         });
       } else {
         currentUser = null;
+        if (logoutBtn) logoutBtn.style.display = 'none';
         showAuth();
         hideVerifyScreen();
       }
     });
+
+    document.getElementById('sidebar-logout')?.addEventListener('click', signOut);
   }
 
   function setupEventListeners() {
