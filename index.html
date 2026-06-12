@@ -779,6 +779,21 @@ body {
 .date-field[data-field="dueDate"].overdue-text { color: var(--danger); font-weight: 500; }
 .date-field[data-field="dueDate"].today-text { color: var(--primary); font-weight: 500; }
 
+.date-field.date-editing { border-bottom-color: transparent; padding: 0; }
+
+.date-inline-input {
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  font-family: var(--font);
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  outline: none;
+  max-width: 200px;
+  box-shadow: 0 0 0 2px var(--primary-glow);
+}
+
 .task-dates {
   display: inline-flex;
   align-items: center;
@@ -2854,24 +2869,28 @@ const App = (() => {
         const task = getTaskById(id);
         if (!task) return;
         const currentVal = task[field] || '';
+        const wasInline = this.classList.contains('date-inline');
+        if (wasInline) return;
+        const origText = this.textContent;
         const input = document.createElement('input');
         input.type = field === 'dueDate' ? 'datetime-local' : 'date';
-        input.className = 'date-field-input';
+        input.className = 'date-inline-input';
         input.value = currentVal;
-        input.style.cssText = 'position:absolute;left:0;top:100%;width:200px;z-index:50;font-size:0.78rem;padding:4px 8px;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-secondary);color:var(--text-primary);font-family:var(--font);outline:none;box-shadow:var(--shadow-md);';
-        const parent = this.parentNode;
-        parent.style.position = 'relative';
-        parent.appendChild(input);
+        this.textContent = '';
+        this.appendChild(input);
+        this.classList.add('date-editing');
         input.focus();
-        input.addEventListener('blur', () => { setTimeout(() => input.remove(), 100); });
-        input.addEventListener('change', () => {
-          if (input.value) {
+        input.addEventListener('blur', () => {
+          if (input.value && input.value !== currentVal) {
             const update = {};
             update[field] = input.value;
             updateTask(id, update);
+          } else {
+            render();
           }
-          input.remove();
         });
+        input.addEventListener('change', () => input.blur());
+        input.addEventListener('keydown', ev => { if (ev.key === 'Escape') { render(); } });
       });
     });
   }
