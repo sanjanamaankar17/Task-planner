@@ -989,17 +989,23 @@ body {
   color: var(--text-primary);
 }
 
-.calendar-nav {
-  background: none;
-  border: none;
-  color: var(--text-muted);
+.cal-month-select, .cal-year-select {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-family: Inter, sans-serif;
+  font-weight: 500;
+  padding: 3px 6px;
+  border-radius: 6px;
   cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.82rem;
+  outline: none;
 }
 
-.calendar-nav:hover { color: var(--primary); background: var(--bg-hover); }
+.cal-month-select { width: 80px; }
+.cal-year-select { width: 68px; }
+
+.cal-month-select:hover, .cal-year-select:hover { border-color: var(--primary); }
 
 .calendar-grid {
   display: grid;
@@ -2241,7 +2247,6 @@ const App = (() => {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const daysInPrev = new Date(year, month, 0).getDate();
 
-    const monthName = new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     const dayHeaders = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
     const taskDates = new Map();
@@ -2258,11 +2263,12 @@ const App = (() => {
     });
 
     let html = `<div class="calendar-header">
-      <span class="calendar-month">${monthName}</span>
-      <span>
-        <button class="calendar-nav" data-cal-nav="prev">◀</button>
-        <button class="calendar-nav" data-cal-nav="next">▶</button>
-      </span>
+      <select class="cal-month-select" id="cal-month-select">
+        ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m,i) => `<option value="${i}" ${i === month ? 'selected' : ''}>${m}</option>`).join('')}
+      </select>
+      <select class="cal-year-select" id="cal-year-select">
+        ${Array.from({length: 11}, (_,i) => year - 5 + i).map(y => `<option value="${y}" ${y === year ? 'selected' : ''}>${y}</option>`).join('')}
+      </select>
     </div><div class="calendar-grid">`;
 
     dayHeaders.forEach(d => { html += `<span class="calendar-day-header">${d}</span>`; });
@@ -2298,17 +2304,13 @@ const App = (() => {
     html += '</div>';
     grid.innerHTML = html;
 
-    grid.querySelectorAll('.calendar-nav').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (btn.dataset.calNav === 'prev') {
-          state.calMonth--;
-          if (state.calMonth < 0) { state.calMonth = 11; state.calYear--; }
-        } else {
-          state.calMonth++;
-          if (state.calMonth > 11) { state.calMonth = 0; state.calYear++; }
-        }
-        renderCalendar();
-      });
+    document.getElementById('cal-month-select')?.addEventListener('change', e => {
+      state.calMonth = parseInt(e.target.value);
+      renderCalendar();
+    });
+    document.getElementById('cal-year-select')?.addEventListener('change', e => {
+      state.calYear = parseInt(e.target.value);
+      renderCalendar();
     });
 
     grid.querySelectorAll('.calendar-day[data-date]').forEach(el => {
