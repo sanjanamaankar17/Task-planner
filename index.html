@@ -1817,6 +1817,28 @@ const App = (() => {
     }
   }
 
+  async function registerSW() {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js');
+      console.log('SW registered');
+    } catch (e) {
+      console.log('SW registration skipped:', e.message);
+    }
+  }
+
+  async function sendNotif(title, body, tag) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    try {
+      const notif = new Notification(title, { body, tag, icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">📋</text></svg>' });
+      setTimeout(() => notif.close(), tag === 'hourly-summary' ? 8000 : 5000);
+    } catch (e) { /* ignore */ }
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg && reg.active) reg.active.postMessage({ title, body, tag });
+    } catch (e) { /* ignore */ }
+  }
+
   function checkOverdueNotifs() {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     const now = new Date();
@@ -1828,16 +1850,13 @@ const App = (() => {
       if (due <= now) {
         notifiedTasks.add(t.id);
         const timeStr = t.dueDate.includes('T') ? ' at ' + t.dueDate.split('T')[1].slice(0, 5) : '';
-        const notif = new Notification('Task Overdue!', {
-          body: `"${t.title}" was due ${formatDate(t.dueDate)}${timeStr}`,
-          icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">⏰</text></svg>'
-        });
-        setTimeout(() => notif.close(), 5000);
+        sendNotif('Task Overdue!', `"${t.title}" was due ${formatDate(t.dueDate)}${timeStr}`, 'overdue-' + t.id);
       }
     });
   }
 
   let remindedTasks = new Set();
+  let lastHourlyNotif = 0;
 
   function checkReminders() {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
@@ -1849,13 +1868,34 @@ const App = (() => {
       if (remindAt <= now) {
         remindedTasks.add(t.id);
         const timeStr = t.reminder.includes('T') ? ' at ' + t.reminder.split('T')[1].slice(0, 5) : '';
-        const notif = new Notification('Task Reminder', {
-          body: `"${t.title}" reminder${timeStr}${t.dueDate ? ' — due ' + formatDate(t.dueDate) : ''}`,
-          icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🔔</text></svg>'
-        });
-        setTimeout(() => notif.close(), 5000);
+        sendNotif('Task Reminder', `"${t.title}" reminder${timeStr}${t.dueDate ? ' — due ' + formatDate(t.dueDate) : ''}`, 'reminder-' + t.id);
       }
     });
+    clearRemindedCache();
+  }
+
+  function checkHourlySummary() {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const now = new Date();
+    const hour = now.getHours();
+    if (hour < 15 || hour >= 21) return;
+    if (now.getTime() - lastHourlyNotif < 3600000) return;
+    lastHourlyNotif = now.getTime();
+    const overdue = state.tasks.filter(t => isOverdue(t) && t.notify !== false);
+    const todayDue = state.tasks.filter(t => sameDay(t.dueDate, todayStr()) && t.status !== 'completed' && t.notify !== false);
+    if (overdue.length === 0 && todayDue.length === 0) return;
+    let body = '';
+    if (overdue.length) body += `${overdue.length} overdue task${overdue.length > 1 ? 's' : ''}`;
+    if (todayDue.length) { if (body) body += ' • '; body += `${todayDue.length} due today`; }
+    if (overdue.length <= 2) body += '\n' + overdue.map(t => '• ' + t.title).join('\n');
+    if (todayDue.length <= 2) body += '\n' + todayDue.map(t => '• ' + t.title).join('\n');
+    sendNotif('Task Summary (' + hour + ':00)', body, 'hourly-summary');
+  }
+
+  function clearRemindedCache() {
+    const validIds = new Set(state.tasks.map(t => t.id));
+    for (const id of notifiedTasks) { if (!validIds.has(id)) notifiedTasks.delete(id); }
+    for (const id of remindedTasks) { if (!validIds.has(id)) remindedTasks.delete(id); }
   }
 
   let state = {
@@ -3055,10 +3095,13 @@ const App = (() => {
     setupEventListeners();
     render();
     requestNotifPermission();
+    registerSW();
     checkOverdueNotifs();
     checkReminders();
+    checkHourlySummary();
     setInterval(checkOverdueNotifs, 30000);
     setInterval(checkReminders, 30000);
+    setInterval(checkHourlySummary, 60000);
   }
 
   function setupEventListeners() {
