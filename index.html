@@ -1458,7 +1458,11 @@ kbd {
   </style>
 </head>
 <body>
-  <div id="auth-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg-primary,#f6f3ff);display:flex;align-items:center;justify-content:center;">
+  <div id="auth-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg-primary,#f6f3ff);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+    <div id="auth-session-bar" style="display:none;background:var(--bg-secondary,#fff);border-radius:12px;padding:10px 16px;width:380px;max-width:92vw;box-shadow:var(--shadow-sm);font-size:0.78rem;color:var(--text-muted,#7a7396);text-align:center;">
+      Signed in as <span id="auth-session-email" style="font-weight:500;color:var(--text-primary,#2d2640);"></span>
+      — <a href="#" id="auth-switch" style="color:var(--primary,#8b7cf7);text-decoration:none;font-weight:500;">Switch account</a>
+    </div>
     <div style="background:var(--bg-secondary,#fff);border-radius:20px;padding:40px;width:380px;max-width:92vw;box-shadow:var(--shadow-lg,0 8px 32px rgba(139,124,247,0.12));">
       <div style="text-align:center;margin-bottom:24px;">
         <svg width="36" height="36" viewBox="0 0 28 28" fill="none" stroke="var(--primary,#8b7cf7)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><rect x="4" y="5" width="20" height="18" rx="3"/><line x1="9" y1="10" x2="19" y2="10"/><line x1="9" y1="14" x2="17" y2="14"/><line x1="9" y1="18" x2="14" y2="18"/><polyline points="17,13 19,15 22,11"/></svg>
@@ -3090,7 +3094,11 @@ const App = (() => {
 
     auth.onAuthStateChanged(user => {
       const logoutBtn = document.getElementById('sidebar-logout');
+      const sessionBar = document.getElementById('auth-session-bar');
+      const sessionEmail = document.getElementById('auth-session-email');
       if (user) {
+        if (sessionEmail && user.email) sessionEmail.textContent = user.email;
+        if (sessionBar) sessionBar.style.display = 'block';
         user.reload().then(() => {
           if (!user.emailVerified) {
             showAuth();
@@ -3099,6 +3107,7 @@ const App = (() => {
           }
           currentUser = user;
           if (logoutBtn) logoutBtn.style.display = 'block';
+          if (sessionBar) sessionBar.style.display = 'none';
           hideAuth();
           loadState();
           initApp();
@@ -3106,12 +3115,17 @@ const App = (() => {
       } else {
         currentUser = null;
         if (logoutBtn) logoutBtn.style.display = 'none';
+        if (sessionBar) sessionBar.style.display = 'none';
         showAuth();
         hideVerifyScreen();
       }
     });
 
     document.getElementById('sidebar-logout')?.addEventListener('click', signOut);
+    document.getElementById('auth-switch')?.addEventListener('click', e => {
+      e.preventDefault();
+      auth.signOut();
+    });
   }
 
   function setupEventListeners() {
