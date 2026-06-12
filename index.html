@@ -1801,11 +1801,39 @@ const App = (() => {
 
   function checkAllDoneConfetti() {
     const today = todayStr();
-    const todayTasks = state.tasks.filter(t => t.dueDate === today);
+    const todayTasks = state.tasks.filter(t => sameDay(t.dueDate, today));
     const done = todayTasks.filter(t => t.status === 'completed').length;
     if (todayTasks.length > 0 && done === todayTasks.length) {
       confetti();
     }
+  }
+
+  // ===== Notifications =====
+  let notifiedTasks = new Set();
+
+  function requestNotifPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+
+  function checkOverdueNotifs() {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const now = new Date();
+    state.tasks.forEach(t => {
+      if (t.status === 'completed' || notifiedTasks.has(t.id)) return;
+      if (!t.dueDate) return;
+      const due = new Date(t.dueDate.includes('T') ? t.dueDate : t.dueDate + 'T23:59');
+      if (due <= now) {
+        notifiedTasks.add(t.id);
+        const timeStr = t.dueDate.includes('T') ? ' at ' + t.dueDate.split('T')[1].slice(0, 5) : '';
+        const notif = new Notification('Task Overdue!', {
+          body: `"${t.title}" was due ${formatDate(t.dueDate)}${timeStr}`,
+          icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">⏰</text></svg>'
+        });
+        setTimeout(() => notif.close(), 5000);
+      }
+    });
   }
 
   let state = {
@@ -1853,33 +1881,43 @@ const App = (() => {
 
   function formatDate(dateStr, relative) {
     if (!dateStr) return '';
+    const hasTime = dateStr.includes('T');
+    const dateObj = new Date(hasTime ? dateStr : dateStr + 'T00:00:00');
     const today = new Date(todayStr());
-    const date = new Date(dateStr + 'T00:00:00');
-    const diff = Math.round((date - today) / 86400000);
+    const diff = Math.round((dateObj - today) / 86400000);
+    const timeStr = hasTime ? dateStr.split('T')[1].slice(0, 5) : '';
 
-    if (diff === 0) return 'Today';
-    if (diff === -1) return 'Yesterday';
-    if (diff === 1) return 'Tomorrow';
+    if (diff === 0) return timeStr ? `Today ${timeStr}` : 'Today';
+    if (diff === -1) return timeStr ? `Yesterday ${timeStr}` : 'Yesterday';
+    if (diff === 1) return timeStr ? `Tomorrow ${timeStr}` : 'Tomorrow';
 
     if (diff < -1) {
       const days = Math.abs(diff);
-      if (relative || diff > -7) return `${days} days ago`;
+      if (relative || diff > -7) return `${days} days ago${timeStr ? ' ' + timeStr : ''}`;
     }
 
     if (diff > 1) {
-      if (relative || diff < 7) return `In ${diff} days`;
+      if (relative || diff < 7) return `In ${diff} days${timeStr ? ' ' + timeStr : ''}`;
     }
 
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + (timeStr ? ' ' + timeStr : '');
   }
 
   function isOverdue(task) {
     if (!task.dueDate || task.status === 'completed') return false;
-    return task.dueDate < todayStr();
+    const due = new Date(task.dueDate.includes('T') ? task.dueDate : task.dueDate + 'T23:59');
+    return due < new Date();
   }
 
   function isToday(dateStr) {
-    return dateStr === todayStr();
+    if (!dateStr) return false;
+    const d = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+    return d === todayStr();
+  }
+
+  function sameDay(dateStr, dayStr) {
+    if (!dateStr || !dayStr) return false;
+    return (dateStr.includes('T') ? dateStr.split('T')[0] : dateStr) === dayStr;
   }
 
 
@@ -1907,11 +1945,11 @@ const App = (() => {
     });
 
     if (state.selectedDate) {
-      tasks = tasks.filter(t => t.dueDate === state.selectedDate || t.startDate === state.selectedDate || t.assignedDate === state.selectedDate);
+      tasks = tasks.filter(t => sameDay(t.dueDate, state.selectedDate) || sameDay(t.startDate, state.selectedDate) || sameDay(t.assignedDate, state.selectedDate));
     } else {
       switch (state.view) {
         case 'today':
-          tasks = tasks.filter(t => t.dueDate === today || t.status === 'in-progress');
+          tasks = tasks.filter(t => sameDay(t.dueDate, today) || t.status === 'in-progress');
           break;
         case 'overdue':
           tasks = tasks.filter(t => isOverdue(t));
@@ -1958,7 +1996,7 @@ const App = (() => {
   function getSummaryStats() {
     const today = todayStr();
     const all = state.tasks;
-    const totalToday = all.filter(t => t.dueDate === today).length;
+    const totalToday = all.filter(t => sameDay(t.dueDate, today)).length;
     const inProgress = all.filter(t => t.status === 'in-progress').length;
     const completed = all.filter(t => t.status === 'completed').length;
     const overdue = all.filter(t => isOverdue(t)).length;
@@ -1967,7 +2005,7 @@ const App = (() => {
 
   function getTodayProgress() {
     const today = todayStr();
-    const todayTasks = state.tasks.filter(t => t.dueDate === today);
+    const todayTasks = state.tasks.filter(t => sameDay(t.dueDate, today));
     const total = todayTasks.length;
     const done = todayTasks.filter(t => t.status === 'completed').length;
     return { total, done, percent: total > 0 ? Math.round((done / total) * 100) : 0 };
@@ -1975,7 +2013,7 @@ const App = (() => {
 
   function getTopPriorities() {
     const today = todayStr();
-    const todayTasks = state.tasks.filter(t => t.dueDate === today);
+    const todayTasks = state.tasks.filter(t => sameDay(t.dueDate, today));
     const pinned = todayTasks.filter(t => state.topPriorityIds.includes(t.id) && t.status !== 'completed');
     pinned.sort((a, b) => {
       const prioOrder = { high: 0, medium: 1, low: 2 };
@@ -2319,10 +2357,11 @@ const App = (() => {
     state.tasks.forEach(t => {
       [t.dueDate, t.startDate, t.assignedDate].forEach(d => {
         if (d) {
-          const key = d.slice(0, 7);
+          const dayKey = d.includes('T') ? d.split('T')[0] : d;
+          const key = dayKey.slice(0, 7);
           if (key === `${year}-${String(month + 1).padStart(2, '0')}`) {
-            if (!taskDates.has(d)) taskDates.set(d, []);
-            taskDates.get(d).push(d === t.dueDate ? 'due' : d === t.startDate ? 'start' : 'assigned');
+            if (!taskDates.has(dayKey)) taskDates.set(dayKey, []);
+            taskDates.get(dayKey).push(sameDay(d, t.dueDate) ? 'due' : sameDay(d, t.startDate) ? 'start' : 'assigned');
           }
         }
       });
@@ -2429,7 +2468,7 @@ const App = (() => {
     const d = new Date();
     for (let i = 0; i < 30; i++) {
       const dateStr = d.toISOString().split('T')[0];
-      const hasCompleted = state.tasks.some(t => t.dueDate === dateStr && t.status === 'completed');
+      const hasCompleted = state.tasks.some(t => sameDay(t.dueDate, dateStr) && t.status === 'completed');
       if (hasCompleted) streak++;
       else if (i > 0) break;
       d.setDate(d.getDate() - 1);
@@ -2530,7 +2569,7 @@ const App = (() => {
           <div style="display:flex;align-items:center;gap:8px;">
             ${estimateHtml}
             ${spentHtml}
-            <input type="date" class="reschedule-input" value="${task.dueDate || ''}" data-id="${task.id}" title="Reschedule">
+            <input type="datetime-local" class="reschedule-input" value="${task.dueDate || ''}" data-id="${task.id}" title="Reschedule">
           </div>
           <div style="display:flex;align-items:center;gap:4px;">
             <button class="task-action-btn" data-id="${task.id}" data-action="edit" title="Edit">✎</button>
@@ -2599,8 +2638,8 @@ const App = (() => {
             <input type="date" class="form-input" id="f-start" value="${todayStr()}">
           </div>
           <div class="form-group">
-            <label class="form-label" for="f-due">Due Date</label>
-            <input type="date" class="form-input" id="f-due" value="${todayStr()}">
+            <label class="form-label" for="f-due">Due Date & Time</label>
+            <input type="datetime-local" class="form-input" id="f-due">
           </div>
         </div>
         <div class="form-row">
@@ -2652,6 +2691,12 @@ const App = (() => {
         </div>
       </form>
     `;
+    const dueInput = document.getElementById('f-due');
+    if (dueInput && !dueInput.value) {
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      dueInput.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    }
     overlay.classList.add('open');
     setupModalEvents();
   }
@@ -2686,8 +2731,8 @@ const App = (() => {
             <input type="date" class="form-input" id="f-start" value="${task.startDate || ''}">
           </div>
           <div class="form-group">
-            <label class="form-label" for="f-due">Due Date</label>
-            <input type="date" class="form-input" id="f-due" value="${task.dueDate || ''}">
+            <label class="form-label" for="f-due">Due Date & Time</label>
+            <input type="datetime-local" class="form-input" id="f-due" value="${task.dueDate || ''}">
           </div>
         </div>
         <div class="form-row">
@@ -2955,6 +3000,9 @@ const App = (() => {
     loadState();
     setupEventListeners();
     render();
+    requestNotifPermission();
+    checkOverdueNotifs();
+    setInterval(checkOverdueNotifs, 30000);
   }
 
   function setupEventListeners() {
