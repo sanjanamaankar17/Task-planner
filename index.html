@@ -725,10 +725,17 @@ body {
 }
 
 .task-due { color: var(--text-muted); }
-
 .task-due.overdue-text { color: var(--danger); font-weight: 500; }
-
 .task-due.today-text { color: var(--primary); font-weight: 500; }
+
+.task-dates {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
 
 .status-indicator {
   display: inline-flex;
@@ -2428,20 +2435,17 @@ const App = (() => {
     const overdue = isOverdue(task) && !isCompleted;
     const pColor = projectColor(task.project);
 
-    let dateHtml = '';
-    if (task.startDate) {
-      dateHtml += `<span class="task-due" style="color:var(--accent-blue);">Start ${formatDate(task.startDate, true)}</span>`;
-    }
-    if (task.assignedDate) {
-      dateHtml += `<span class="task-due" style="color:var(--accent-mint);">Assigned ${formatDate(task.assignedDate, true)}</span>`;
-    }
+    const dates = [];
+    if (task.startDate) dates.push(`<span style="color:var(--accent-blue);">S: ${formatDate(task.startDate, true)}</span>`);
+    if (task.assignedDate) dates.push(`<span style="color:var(--accent-mint);">A: ${formatDate(task.assignedDate, true)}</span>`);
     if (task.dueDate) {
       const label = formatDate(task.dueDate);
       let cls = '';
       if (overdue) cls = 'overdue-text';
       else if (isToday(task.dueDate)) cls = 'today-text';
-      dateHtml += `<span class="task-due ${cls}">${escHtml(label)}</span>`;
+      dates.push(`<span class="${cls}">Due: ${escHtml(label)}</span>`);
     }
+    const dateHtml = dates.length ? `<span class="task-dates">${dates.join(' · ')}</span>` : '';
 
     const tagsHtml = (task.tags || []).map(tag =>
       `<span class="task-tag">${escHtml(tag)}</span>`
