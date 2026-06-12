@@ -7,6 +7,21 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script>
+    firebase.initializeApp({
+      apiKey: "AIzaSyDaemu8RqZAdWgYkzp4Rt_3hc1_hLnmI5I",
+      authDomain: "task-planner-b6d2d.firebaseapp.com",
+      projectId: "task-planner-b6d2d",
+      storageBucket: "task-planner-b6d2d.firebasestorage.app",
+      messagingSenderId: "278988628432",
+      appId: "1:278988628432:web:80e388cfb072cccb6f19d5"
+    });
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+  </script>
   <style>
 *,
 *::before,
@@ -1443,7 +1458,31 @@ kbd {
   </style>
 </head>
 <body>
-  <div id="app">
+  <div id="auth-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg-primary,#f6f3ff);display:flex;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-secondary,#fff);border-radius:20px;padding:40px;width:380px;max-width:92vw;box-shadow:var(--shadow-lg,0 8px 32px rgba(139,124,247,0.12));">
+      <div style="text-align:center;margin-bottom:24px;">
+        <svg width="36" height="36" viewBox="0 0 28 28" fill="none" stroke="var(--primary,#8b7cf7)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><rect x="4" y="5" width="20" height="18" rx="3"/><line x1="9" y1="10" x2="19" y2="10"/><line x1="9" y1="14" x2="17" y2="14"/><line x1="9" y1="18" x2="14" y2="18"/><polyline points="17,13 19,15 22,11"/></svg>
+        <div style="font-size:1.3rem;font-weight:600;color:var(--text-primary,#2d2640);">Planner</div>
+        <div style="font-size:0.85rem;color:var(--text-muted,#7a7396);margin-top:4px;">Sign in to access your tasks</div>
+      </div>
+      <div id="auth-error" style="color:var(--danger,#e8829a);font-size:0.8rem;text-align:center;margin-bottom:12px;display:none;"></div>
+      <form id="auth-form">
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:0.78rem;font-weight:500;color:var(--text-secondary,#7a7396);margin-bottom:5px;">Email</label>
+          <input type="email" id="auth-email" required style="width:100%;padding:9px 12px;border:1px solid var(--border-color,#e8e4f0);border-radius:8px;font-size:0.88rem;font-family:Inter,sans-serif;color:var(--text-primary,#2d2640);background:var(--bg-primary,#f6f3ff);outline:none;box-sizing:border-box;" placeholder="you@example.com">
+        </div>
+        <div style="margin-bottom:20px;">
+          <label style="display:block;font-size:0.78rem;font-weight:500;color:var(--text-secondary,#7a7396);margin-bottom:5px;">Password</label>
+          <input type="password" id="auth-password" required style="width:100%;padding:9px 12px;border:1px solid var(--border-color,#e8e4f0);border-radius:8px;font-size:0.88rem;font-family:Inter,sans-serif;color:var(--text-primary,#2d2640);background:var(--bg-primary,#f6f3ff);outline:none;box-sizing:border-box;" placeholder="••••••••">
+        </div>
+        <button type="submit" id="auth-submit" style="width:100%;padding:10px;background:var(--primary,#8b7cf7);color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;">Sign In</button>
+      </form>
+      <div style="text-align:center;margin-top:14px;font-size:0.82rem;color:var(--text-muted,#7a7396);">
+        Don't have an account? <a href="#" id="auth-toggle" style="color:var(--primary,#8b7cf7);text-decoration:none;font-weight:500;">Sign Up</a>
+      </div>
+    </div>
+  </div>
+  <div id="app" style="display:none;">
     <aside id="sidebar">
       <div class="sidebar-top">
         <div class="sidebar-brand">
@@ -1802,59 +1841,7 @@ const App = (() => {
     return dateStr === todayStr();
   }
 
-  function loadState() {
-    let raw = null;
-    try {
-      raw = localStorage.getItem(STORAGE_KEY);
-    } catch (e) { /* ignore */ }
-    if (!raw) raw = getCookie(STORAGE_KEY);
-    if (raw) {
-      try {
-        const saved = JSON.parse(raw);
-        state.tasks = saved.tasks || [];
-        state.view = saved.view || 'today';
-        state.darkMode = saved.darkMode || false;
-        state.topPriorityIds = saved.topPriorityIds || [];
-        state.userName = saved.userName || 'User';
-        state.userRole = saved.userRole || 'ETL & AI Developer';
-        taskIdCounter = saved.taskIdCounter || Date.now();
-        if (saved.searchQuery) state.searchQuery = saved.searchQuery;
-        if (saved.sortBy) state.sortBy = saved.sortBy;
-        if (saved.filterPriority) state.filterPriority = saved.filterPriority;
-        if (saved.filterStatus) state.filterStatus = saved.filterStatus;
-      } catch (e) {
-        console.warn('Failed to load state:', e);
-      }
-    }
-    if (!state.tasks || state.tasks.length === 0) {
-      state.tasks = [];
-      saveState();
-    }
-  }
 
-  function saveState() {
-    const data = JSON.stringify({
-      tasks: state.tasks,
-      view: state.view,
-      darkMode: state.darkMode,
-      topPriorityIds: state.topPriorityIds,
-      userName: state.userName,
-      userRole: state.userRole,
-      searchQuery: state.searchQuery,
-      sortBy: state.sortBy,
-      filterPriority: state.filterPriority,
-      filterStatus: state.filterStatus,
-      taskIdCounter
-    });
-    try {
-      localStorage.setItem(STORAGE_KEY, data);
-    } catch (e) {
-      console.warn('localStorage save failed:', e);
-    }
-    try {
-      setCookie(STORAGE_KEY, data, 365);
-    } catch (e) { /* ignore */ }
-  }
 
   function generateId() {
     return 't' + (++taskIdCounter);
@@ -2128,6 +2115,7 @@ const App = (() => {
         <div style="display:flex;gap:8px;margin:16px 0;">
           <button type="button" class="btn btn-secondary" id="export-btn" style="flex:1;">Export Tasks</button>
           <button type="button" class="btn btn-secondary" id="import-btn" style="flex:1;">Import Tasks</button>
+          <button type="button" class="btn btn-danger" id="logout-btn" style="flex:1;">Sign Out</button>
         </div>
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" id="modal-cancel">Cancel</button>
@@ -2152,6 +2140,7 @@ const App = (() => {
     });
     document.getElementById('export-btn')?.addEventListener('click', exportTasks);
     document.getElementById('import-btn')?.addEventListener('click', () => document.getElementById('import-input')?.click());
+    document.getElementById('logout-btn')?.addEventListener('click', () => { closeModal(); signOut(); });
     document.addEventListener('keydown', handleModalKeydown);
   }
 
@@ -2795,12 +2784,176 @@ const App = (() => {
     input.value = '';
   }
 
+  // ===== Auth =====
+
+  let currentUser = null;
+  let isSignUp = false;
+
+  function showAuth() {
+    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
+
+  function hideAuth() {
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+  }
+
+  function applyState(saved) {
+    state.tasks = saved.tasks || [];
+    state.view = saved.view || 'today';
+    state.darkMode = saved.darkMode || false;
+    state.topPriorityIds = saved.topPriorityIds || [];
+    state.userName = saved.userName || 'User';
+    state.userRole = saved.userRole || 'ETL & AI Developer';
+    taskIdCounter = saved.taskIdCounter || Date.now();
+    if (saved.searchQuery) state.searchQuery = saved.searchQuery;
+    if (saved.sortBy) state.sortBy = saved.sortBy;
+    if (saved.filterPriority) state.filterPriority = saved.filterPriority;
+    if (saved.filterStatus) state.filterStatus = saved.filterStatus;
+  }
+
+  function loadFromLocal() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) { applyState(JSON.parse(raw)); return true; }
+    } catch(e) {}
+    return false;
+  }
+
+  function saveToLocal() {
+    const data = {
+      tasks: state.tasks,
+      view: state.view,
+      darkMode: state.darkMode,
+      topPriorityIds: state.topPriorityIds,
+      userName: state.userName,
+      userRole: state.userRole,
+      searchQuery: state.searchQuery,
+      sortBy: state.sortBy,
+      filterPriority: state.filterPriority,
+      filterStatus: state.filterStatus,
+      taskIdCounter
+    };
+    const json = JSON.stringify(data);
+    try { localStorage.setItem(STORAGE_KEY, json); } catch(e) { console.warn('localStorage save failed:', e); }
+    try { setCookie(STORAGE_KEY, json, 365); } catch(e) {}
+  }
+
+  function loadFromFirestore() {
+    if (!currentUser) return;
+    db.collection('users').doc(currentUser.uid).get().then(doc => {
+      if (doc.exists) {
+        applyState(doc.data());
+        saveToLocal();
+        render();
+      } else if (state.tasks.length === 0) {
+        state.tasks = [];
+        saveToFirestore();
+      }
+    }).catch(err => console.warn('Firestore load error:', err));
+  }
+
+  function saveToFirestore() {
+    if (!currentUser) return;
+    db.collection('users').doc(currentUser.uid).set({
+      tasks: state.tasks,
+      topPriorityIds: state.topPriorityIds,
+      userName: state.userName,
+      userRole: state.userRole,
+      taskIdCounter,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(err => console.warn('Firestore save error:', err));
+  }
+
+  function saveState() {
+    saveToLocal();
+    saveToFirestore();
+  }
+
+  function loadState() {
+    loadFromLocal();
+    if (currentUser) loadFromFirestore();
+    if (!state.tasks || state.tasks.length === 0) {
+      state.tasks = [];
+      saveToLocal();
+    }
+  }
+
+  function initApp() {
+    setupEventListeners();
+    render();
+  }
+
+  // ===== Auth Handlers =====
+
+  function toggleAuthMode() {
+    isSignUp = !isSignUp;
+    document.getElementById('auth-submit').textContent = isSignUp ? 'Sign Up' : 'Sign In';
+    document.getElementById('auth-toggle').textContent = isSignUp ? 'Sign In' : 'Sign Up';
+    document.getElementById('auth-toggle').parentElement.innerHTML = isSignUp
+      ? `Already have an account? <a href="#" id="auth-toggle" style="color:var(--primary,#8b7cf7);text-decoration:none;font-weight:500;">Sign In</a>`
+      : `Don't have an account? <a href="#" id="auth-toggle" style="color:var(--primary,#8b7cf7);text-decoration:none;font-weight:500;">Sign Up</a>`;
+    document.getElementById('auth-toggle')?.addEventListener('click', e => { e.preventDefault(); toggleAuthMode(); });
+    document.getElementById('auth-error').style.display = 'none';
+  }
+
+  function handleAuthError(err) {
+    const el = document.getElementById('auth-error');
+    const msg = err.code === 'auth/user-not-found' ? 'No account with this email' :
+                err.code === 'auth/wrong-password' ? 'Wrong password' :
+                err.code === 'auth/email-already-in-use' ? 'Email already registered' :
+                err.code === 'auth/weak-password' ? 'Password must be at least 6 characters' :
+                err.code === 'auth/invalid-credential' ? 'Invalid email or password' :
+                err.code === 'auth/too-many-requests' ? 'Too many attempts. Try again later.' :
+                err.message || 'Something went wrong';
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function handleAuthSubmit(e) {
+    e.preventDefault();
+    const email = document.getElementById('auth-email').value;
+    const password = document.getElementById('auth-password').value;
+    document.getElementById('auth-error').style.display = 'none';
+    document.getElementById('auth-submit').disabled = true;
+    document.getElementById('auth-submit').textContent = 'Please wait...';
+
+    const promise = isSignUp
+      ? auth.createUserWithEmailAndPassword(email, password)
+      : auth.signInWithEmailAndPassword(email, password);
+
+    promise.then(() => {
+      document.getElementById('auth-submit').disabled = false;
+    }).catch(err => {
+      handleAuthError(err);
+      document.getElementById('auth-submit').disabled = false;
+      document.getElementById('auth-submit').textContent = isSignUp ? 'Sign Up' : 'Sign In';
+    });
+  }
+
+  function signOut() {
+    auth.signOut();
+  }
+
   // ===== Init =====
 
   function init() {
-    loadState();
-    setupEventListeners();
-    render();
+    loadFromLocal();
+
+    document.getElementById('auth-form')?.addEventListener('submit', handleAuthSubmit);
+    document.getElementById('auth-toggle')?.addEventListener('click', e => { e.preventDefault(); toggleAuthMode(); });
+
+    auth.onAuthStateChanged(user => {
+      currentUser = user;
+      if (user) {
+        hideAuth();
+        loadState();
+        initApp();
+      } else {
+        showAuth();
+      }
+    });
   }
 
   function setupEventListeners() {
