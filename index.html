@@ -760,9 +760,24 @@ body {
   flex-shrink: 0;
 }
 
-.task-due { color: var(--text-muted); }
+.task-dues { color: var(--text-muted); }
 .task-due.overdue-text { color: var(--danger); font-weight: 500; }
 .task-due.today-text { color: var(--primary); font-weight: 500; }
+
+.date-field {
+  cursor: pointer;
+  border-bottom: 1px dashed transparent;
+  transition: border-color 0.15s;
+  position: relative;
+}
+
+.date-field:hover { border-bottom-color: var(--text-muted); }
+
+.date-field[data-field="startDate"] { color: var(--accent-blue); }
+.date-field[data-field="assignedDate"] { color: var(--accent-mint); }
+.date-field[data-field="dueDate"] { color: var(--text-muted); }
+.date-field[data-field="dueDate"].overdue-text { color: var(--danger); font-weight: 500; }
+.date-field[data-field="dueDate"].today-text { color: var(--primary); font-weight: 500; }
 
 .task-dates {
   display: inline-flex;
@@ -2739,14 +2754,14 @@ const App = (() => {
     const pColor = projectColor(task.project);
 
     const dates = [];
-    if (task.startDate) dates.push(`<span style="color:var(--accent-blue);">S: ${formatDate(task.startDate, true)}</span>`);
-    if (task.assignedDate) dates.push(`<span style="color:var(--accent-mint);">A: ${formatDate(task.assignedDate, true)}</span>`);
+    if (task.startDate) dates.push(`<span class="date-field" data-id="${task.id}" data-field="startDate" title="Click to change">S: ${formatDate(task.startDate, true)}</span>`);
+    if (task.assignedDate) dates.push(`<span class="date-field" data-id="${task.id}" data-field="assignedDate" title="Click to change">A: ${formatDate(task.assignedDate, true)}</span>`);
     if (task.dueDate) {
       const label = formatDate(task.dueDate);
-      let cls = '';
-      if (overdue) cls = 'overdue-text';
-      else if (isToday(task.dueDate)) cls = 'today-text';
-      dates.push(`<span class="${cls}">Due: ${escHtml(label)}</span>`);
+      let cls = 'date-field';
+      if (overdue) cls += ' overdue-text';
+      else if (isToday(task.dueDate)) cls += ' today-text';
+      dates.push(`<span class="${cls}" data-id="${task.id}" data-field="dueDate" title="Click to change">Due: ${escHtml(label)}</span>`);
     }
     const dateHtml = dates.length ? `<span class="task-dates">${dates.join(' · ')}</span>` : '';
 
@@ -2829,6 +2844,35 @@ const App = (() => {
 
     document.querySelectorAll('[data-action="delete"]').forEach(btn => {
       btn.addEventListener('click', () => confirmDelete(btn.dataset.id));
+    });
+
+    document.querySelectorAll('.date-field').forEach(el => {
+      el.addEventListener('click', function(e) {
+        if (e.target.tagName === 'INPUT') return;
+        const id = this.dataset.id;
+        const field = this.dataset.field;
+        const task = getTaskById(id);
+        if (!task) return;
+        const currentVal = task[field] || '';
+        const input = document.createElement('input');
+        input.type = field === 'dueDate' ? 'datetime-local' : 'date';
+        input.className = 'date-field-input';
+        input.value = currentVal;
+        input.style.cssText = 'position:absolute;left:0;top:100%;width:200px;z-index:50;font-size:0.78rem;padding:4px 8px;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-secondary);color:var(--text-primary);font-family:var(--font);outline:none;box-shadow:var(--shadow-md);';
+        const parent = this.parentNode;
+        parent.style.position = 'relative';
+        parent.appendChild(input);
+        input.focus();
+        input.addEventListener('blur', () => { setTimeout(() => input.remove(), 100); });
+        input.addEventListener('change', () => {
+          if (input.value) {
+            const update = {};
+            update[field] = input.value;
+            updateTask(id, update);
+          }
+          input.remove();
+        });
+      });
     });
   }
 
