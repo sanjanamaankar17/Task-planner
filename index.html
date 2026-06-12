@@ -1822,6 +1822,7 @@ const App = (() => {
     const now = new Date();
     state.tasks.forEach(t => {
       if (t.status === 'completed' || notifiedTasks.has(t.id)) return;
+      if (t.notify === false) return;
       if (!t.dueDate) return;
       const due = new Date(t.dueDate.includes('T') ? t.dueDate : t.dueDate + 'T23:59');
       if (due <= now) {
@@ -1830,6 +1831,27 @@ const App = (() => {
         const notif = new Notification('Task Overdue!', {
           body: `"${t.title}" was due ${formatDate(t.dueDate)}${timeStr}`,
           icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">⏰</text></svg>'
+        });
+        setTimeout(() => notif.close(), 5000);
+      }
+    });
+  }
+
+  let remindedTasks = new Set();
+
+  function checkReminders() {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const now = new Date();
+    state.tasks.forEach(t => {
+      if (t.status === 'completed' || remindedTasks.has(t.id)) return;
+      if (!t.reminder) return;
+      const remindAt = new Date(t.reminder.includes('T') ? t.reminder : t.reminder + 'T23:59');
+      if (remindAt <= now) {
+        remindedTasks.add(t.id);
+        const timeStr = t.reminder.includes('T') ? ' at ' + t.reminder.split('T')[1].slice(0, 5) : '';
+        const notif = new Notification('Task Reminder', {
+          body: `"${t.title}" reminder${timeStr}${t.dueDate ? ' — due ' + formatDate(t.dueDate) : ''}`,
+          icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🔔</text></svg>'
         });
         setTimeout(() => notif.close(), 5000);
       }
@@ -2049,6 +2071,8 @@ const App = (() => {
       assignedDate: data.assignedDate || todayStr(),
       tags: data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
       important: data.important || false,
+      notify: data.notify !== false,
+      reminder: data.reminder || '',
       createdAt: Date.now()
     };
     state.tasks.push(task);
@@ -2076,6 +2100,8 @@ const App = (() => {
       task.tags = data.tags.split(',').map(t => t.trim()).filter(Boolean);
     }
     if (data.important !== undefined) task.important = data.important;
+    if (data.notify !== undefined) task.notify = data.notify;
+    if (data.reminder !== undefined) task.reminder = data.reminder;
     saveState();
     render();
     return task;
@@ -2537,6 +2563,8 @@ const App = (() => {
     const notesHtml = task.notes ? `<div class="task-notes">${escHtml(task.notes)}</div>` : '';
     const estimateHtml = task.estimatedTime ? `<span class="task-estimate">${formatEstimate(task.estimatedTime)}</span>` : '';
     const spentHtml = task.timeSpent ? `<span class="task-estimate" style="color:var(--primary);">${formatEstimate(task.timeSpent)} spent</span>` : '';
+    const reminderHtml = task.reminder ? `<span class="task-estimate" style="color:var(--accent-yellow);" title="Reminder: ${formatDate(task.reminder)}">🔔 ${formatDate(task.reminder)}</span>` : '';
+    const noNotifHtml = task.notify === false ? `<span class="task-estimate" style="color:var(--text-muted);" title="Overdue notifications disabled">🔕</span>` : '';
 
     return `
       <div class="task-card ${overdue ? 'overdue' : ''} ${isCompleted ? 'completed' : ''}" data-id="${task.id}" style="animation-delay:${index * 0.04}s">
@@ -2566,9 +2594,11 @@ const App = (() => {
           </div>
         </div>
         <div class="task-card-footer">
-          <div style="display:flex;align-items:center;gap:8px;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             ${estimateHtml}
             ${spentHtml}
+            ${reminderHtml}
+            ${noNotifHtml}
             <input type="datetime-local" class="reschedule-input" value="${task.dueDate || ''}" data-id="${task.id}" title="Reschedule">
           </div>
           <div style="display:flex;align-items:center;gap:4px;">
@@ -2681,6 +2711,17 @@ const App = (() => {
             <input type="date" class="form-input" id="f-assigned" value="${todayStr()}">
           </div>
         </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="f-reminder">Reminder</label>
+            <input type="datetime-local" class="form-input" id="f-reminder">
+            <span style="font-size:0.7rem;color:var(--text-muted);">Notify me before the due date</span>
+          </div>
+          <div class="form-checkbox" style="padding-top:22px;">
+            <input type="checkbox" id="f-notify" checked>
+            <label for="f-notify">Send notification when overdue</label>
+          </div>
+        </div>
         <div class="form-checkbox">
           <input type="checkbox" id="f-important">
           <label for="f-important">Mark as important</label>
@@ -2774,6 +2815,17 @@ const App = (() => {
             <input type="date" class="form-input" id="f-assigned" value="${task.assignedDate || todayStr()}">
           </div>
         </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="f-reminder">Reminder</label>
+            <input type="datetime-local" class="form-input" id="f-reminder" value="${task.reminder || ''}">
+            <span style="font-size:0.7rem;color:var(--text-muted);">Notify me before the due date</span>
+          </div>
+          <div class="form-checkbox" style="padding-top:22px;">
+            <input type="checkbox" id="f-notify" ${task.notify !== false ? 'checked' : ''}>
+            <label for="f-notify">Send notification when overdue</label>
+          </div>
+        </div>
         <div class="form-checkbox">
           <input type="checkbox" id="f-important" ${task.important ? 'checked' : ''}>
           <label for="f-important">Mark as important</label>
@@ -2820,7 +2872,9 @@ const App = (() => {
       timeSpent: parseEstimate(document.getElementById('f-spent').value),
       assignedDate: (document.getElementById('f-assigned') || {}).value || todayStr(),
       tags: document.getElementById('f-tags').value,
-      important: document.getElementById('f-important').checked
+      important: document.getElementById('f-important').checked,
+      notify: document.getElementById('f-notify').checked,
+      reminder: document.getElementById('f-reminder').value
     };
     if (!data.title.trim()) return;
     if (editingTaskId) {
@@ -3002,7 +3056,9 @@ const App = (() => {
     render();
     requestNotifPermission();
     checkOverdueNotifs();
+    checkReminders();
     setInterval(checkOverdueNotifs, 30000);
+    setInterval(checkReminders, 30000);
   }
 
   function setupEventListeners() {
