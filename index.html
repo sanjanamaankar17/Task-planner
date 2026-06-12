@@ -1497,31 +1497,133 @@ kbd {
 /* ===== Utilities ===== */
 .hidden { display: none !important; }
 
+/* ===== Hamburger ===== */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.hamburger span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--text-primary);
+  border-radius: 2px;
+  transition: transform 0.25s, opacity 0.25s;
+}
+
+.hamburger.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; }
+.hamburger.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+/* ===== Sidebar backdrop ===== */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 98;
+  opacity: 0;
+  transition: opacity 0.25s;
+  pointer-events: none;
+}
+
+.sidebar-backdrop.open { opacity: 1; pointer-events: auto; }
+
 /* ===== Responsive ===== */
 @media (max-width: 1024px) {
   #right-column { display: none; }
+  #top-cards { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 768px) {
-  #sidebar { display: none; }
+  .hamburger { display: flex; }
+
+  #sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    z-index: 99;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    padding: 0;
+    border-right: none;
+  }
+
+  #sidebar.open { transform: translateX(0); }
+
+  #sidebar .sidebar-inner {
+    width: 260px;
+    height: 100vh;
+    padding: 24px 16px 20px;
+    background: var(--bg-sidebar);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
   #right-column { display: none; }
-  #main-area { padding: 20px 16px; }
-  #top-cards { grid-template-columns: 1fr; }
+  #main-area { padding: 16px; }
+  #top-cards { grid-template-columns: 1fr; gap: 12px; margin-bottom: 20px; }
   .task-section-header { flex-direction: column; align-items: stretch; }
   .form-row { grid-template-columns: 1fr; }
   .form-row-3 { grid-template-columns: 1fr; }
   .header-center { display: none; }
+
+  #header { gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+  .header-left { flex: 1; min-width: 0; }
+  .greeting { font-size: 1.15rem; }
+
+  .modal {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 100vh;
+    height: 100vh;
+    border-radius: 0;
+    padding: 20px;
+    transform: translateY(0) scale(1);
+  }
+  .modal-overlay.open .modal { transform: translateY(0) scale(1); }
+
+  .task-card { padding: 12px 14px; }
+  .task-card-header { flex-wrap: wrap; }
+  .task-card-actions { width: 100%; justify-content: flex-end; margin-top: 8px; }
+  .task-meta { font-size: 0.72rem; }
+  .task-title { font-size: 0.84rem; }
+
+  .mini-stats { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 480px) {
   .header-add-btn span { display: none; }
-  .current-date { font-size: 0.75rem; }
+  .header-add-btn { padding: 9px 12px; }
+  .current-date { font-size: 0.7rem; }
+  .greeting { font-size: 1rem; }
+  #main-area { padding: 12px; }
+  .task-card { padding: 10px 12px; }
+  .task-card-footer { flex-direction: column; align-items: stretch; gap: 6px; }
+  .task-card-footer > div:last-child { justify-content: flex-end; }
+  .reschedule-input { max-width: 180px; }
+
+  .modal { padding: 16px; }
+  .form-actions { flex-direction: column; }
+  .form-actions .btn { width: 100%; }
 }
   </style>
 </head>
 <body>
   <div id="app">
     <aside id="sidebar">
+      <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+      <div class="sidebar-inner">
       <div class="sidebar-top">
         <div class="sidebar-brand">
           <svg class="sidebar-logo" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -1566,10 +1668,14 @@ kbd {
           <button class="profile-settings" id="dark-mode-toggle" title="Toggle theme">☾</button>
         </div>
       </div>
+      </div>
     </aside>
 
     <div id="main-area">
       <header id="header">
+        <button class="hamburger" id="hamburger" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
         <div class="header-left">
           <div class="greeting" id="greeting"></div>
         </div>
@@ -3107,6 +3213,16 @@ const App = (() => {
   function setupEventListeners() {
     document.getElementById('dark-mode-toggle')?.addEventListener('click', toggleDarkMode);
 
+    const hamburger = document.getElementById('hamburger');
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    function closeSidebar() { sidebar?.classList.remove('open'); hamburger?.classList.remove('open'); backdrop?.classList.remove('open'); }
+    hamburger?.addEventListener('click', () => {
+      sidebar?.classList.toggle('open');
+      hamburger?.classList.toggle('open');
+      backdrop?.classList.toggle('open');
+    });
+    backdrop?.addEventListener('click', closeSidebar);
     document.querySelectorAll('.sidebar-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         state.view = btn.dataset.view;
@@ -3119,6 +3235,7 @@ const App = (() => {
         if (searchInput) searchInput.value = '';
         saveState();
         render();
+        closeSidebar();
       });
     });
 
