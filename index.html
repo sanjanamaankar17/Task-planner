@@ -1478,8 +1478,12 @@ kbd {
             <span id="pw-toggle" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-muted,#a9a2c0);font-size:1.1rem;line-height:1;user-select:none;" title="Show password">👁</span>
           </div>
         </div>
+        <div style="text-align:right;margin-bottom:12px;font-size:0.78rem;">
+          <a href="#" id="auth-forgot" style="color:var(--text-muted,#a9a2c0);text-decoration:none;">Forgot password?</a>
+        </div>
         <button type="submit" id="auth-submit" style="width:100%;padding:10px;background:var(--primary,#8b7cf7);color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;">Sign In</button>
       </form>
+      <div id="auth-success" style="color:var(--success,#7bc9a0);font-size:0.8rem;text-align:center;margin-bottom:8px;display:none;"></div>
       <div style="text-align:center;margin-top:14px;font-size:0.82rem;color:var(--text-muted,#7a7396);">
         Don't have an account? <a href="#" id="auth-toggle" style="color:var(--primary,#8b7cf7);text-decoration:none;font-weight:500;">Sign Up</a>
       </div>
@@ -3065,6 +3069,23 @@ const App = (() => {
     document.getElementById('verify-back')?.addEventListener('click', e => {
       e.preventDefault();
       auth.signOut();
+    });
+    document.getElementById('auth-forgot')?.addEventListener('click', e => {
+      e.preventDefault();
+      const email = document.getElementById('auth-email').value;
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        document.getElementById('auth-error').textContent = 'Enter your email address first';
+        document.getElementById('auth-error').style.display = 'block';
+        return;
+      }
+      auth.sendPasswordResetEmail(email).then(() => {
+        document.getElementById('auth-error').style.display = 'none';
+        const success = document.getElementById('auth-success');
+        success.textContent = 'Password reset email sent! Check your inbox.';
+        success.style.display = 'block';
+      }).catch(err => {
+        handleAuthError(err);
+      });
     });
 
     auth.onAuthStateChanged(user => {
