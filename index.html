@@ -379,7 +379,7 @@ body {
 /* ===== Top Cards ===== */
 #top-cards {
   display: grid;
-  grid-template-columns: 1fr 1.5fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   margin-bottom: 28px;
 }
@@ -1537,9 +1537,14 @@ kbd {
 .sidebar-backdrop.open { opacity: 1; pointer-events: auto; }
 
 /* ===== Responsive ===== */
-@media (max-width: 1024px) {
+@media (max-width: 1100px) {
   #right-column { display: none; }
   #top-cards { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 900px) {
+  #top-cards { grid-template-columns: 1fr; }
+  .top-card { padding: 16px 18px; }
 }
 
 @media (max-width: 768px) {
@@ -1555,6 +1560,7 @@ kbd {
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     padding: 0;
     border-right: none;
+    background: transparent;
   }
 
   #sidebar.open { transform: translateX(0); }
@@ -1599,6 +1605,9 @@ kbd {
   .task-title { font-size: 0.84rem; }
 
   .mini-stats { grid-template-columns: repeat(2, 1fr); }
+
+  .top-card { padding: 14px 16px; }
+  .top-card-progress { gap: 10px; }
 }
 
 @media (max-width: 480px) {
@@ -1615,6 +1624,12 @@ kbd {
   .modal { padding: 16px; }
   .form-actions { flex-direction: column; }
   .form-actions .btn { width: 100%; }
+
+  .calendar-header { flex-wrap: wrap; }
+  .cal-month-select, .cal-year-select { font-size: 0.75rem; }
+
+  #task-tabs { gap: 4px; }
+  .task-tab { font-size: 0.72rem; padding: 6px 10px; }
 }
   </style>
 </head>
