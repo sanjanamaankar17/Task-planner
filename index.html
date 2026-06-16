@@ -105,6 +105,7 @@ body {
 
 #app {
   display: flex;
+  flex-wrap: nowrap;
   max-width: 1280px;
   margin: 0 auto;
   min-height: 100vh;
@@ -1184,6 +1185,77 @@ body {
   transition: width 0.5s ease;
 }
 
+/* ===== Widget Toggle ===== */
+.widget-toggle-btn {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-family: var(--font);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-left: auto;
+}
+.widget-toggle-btn:hover { color: var(--primary); border-color: var(--primary); }
+.widget-toggle-btn svg { width: 14px; height: 14px; }
+
+/* Header streak badge (mobile only) */
+.header-streak {
+  display: none;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--accent-yellow-light);
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+/* Header stats toggle (mobile only) */
+.header-stats-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+}
+.header-stats-btn:hover { color: var(--primary); border-color: var(--primary); }
+.header-stats-btn svg { width: 16px; height: 16px; }
+.header-stats-btn.active { color: var(--primary); background: var(--primary-light); border-color: var(--primary); }
+
+/* Stats back button (mobile only) */
+.stats-back-btn {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  font-family: var(--font);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  width: fit-content;
+}
+.stats-back-btn:hover { color: var(--primary); border-color: var(--primary); }
+.stats-back-btn svg { width: 16px; height: 16px; }
+
 /* ===== Bottom Strip ===== */
 .mini-stats {
   display: grid;
@@ -1576,25 +1648,21 @@ kbd {
 
 /* ===== Responsive ===== */
 @media (max-width: 1100px) {
-  #app { flex-wrap: wrap; }
-  #main-area { flex: 1 1 100%; min-width: 0; }
   #right-column {
-    width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 12px;
-    padding: 0 32px 32px;
-    border-top: 1px solid var(--border-color);
-    padding-top: 20px;
+    width: 180px;
+    padding: 28px 12px 32px 0;
   }
-  #right-column .widget { flex: 1 1 220px; }
-  #right-column .mini-stats { flex: 1 1 100%; }
+  #right-column .widget { padding: 12px 14px; }
   #top-cards { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 900px) {
+  #sidebar { width: 180px; padding: 28px 12px 20px; }
+  #right-column { width: 160px; }
+  #main-area { padding: 24px 20px 32px; }
   #top-cards { grid-template-columns: 1fr; }
   .top-card { padding: 16px 18px; }
+  .greeting { font-size: 1.1rem; }
 }
 
 @media (max-width: 768px) {
@@ -1627,13 +1695,45 @@ kbd {
   }
 
   #right-column { 
+    display: none;
     width: 100%; 
-    flex-direction: column; 
-    padding: 0 16px 20px; 
-    border-top: 1px solid var(--border-color);
-    padding-top: 16px;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+    order: 2;
+    position: relative;
+    z-index: 2;
+    background: var(--bg-primary);
   }
-  #right-column .widget { flex: 1 1 100%; }
+  #right-column.stats-open {
+    display: flex;
+  }
+  #main-area.stats-open #top-cards,
+  #main-area.stats-open #task-section {
+    display: none;
+  }
+  #right-column .mini-stats {
+    width: 100%;
+    grid-template-columns: repeat(4, 1fr);
+    margin-bottom: 0;
+    gap: 4px;
+  }
+  #right-column .mini-stat {
+    padding: 6px 8px;
+    flex-direction: column;
+    gap: 2px;
+    text-align: center;
+  }
+  #right-column .mini-stat-label { margin-left: 0; font-size: 0.55rem; }
+  #right-column .widget {
+    display: block;
+    padding: 12px 14px;
+  }
+  #right-column .widget + .widget { margin-top: 0; }
+  .widget-toggle-btn { display: none; }
+  .stats-back-btn { display: inline-flex; }
+  .header-streak { display: inline-flex; }
+  .header-stats-btn { display: inline-flex; }
   #main-area { padding: 16px; }
   #top-cards { grid-template-columns: 1fr; gap: 12px; margin-bottom: 20px; }
   .task-section-header { flex-direction: column; align-items: stretch; }
@@ -1641,9 +1741,10 @@ kbd {
   .form-row-3 { grid-template-columns: 1fr; }
   .header-center { display: none; }
 
-  #header { gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
-  .header-left { flex: 1; min-width: 0; }
-  .greeting { font-size: 1.15rem; }
+  #header { gap: 8px; flex-wrap: nowrap; margin-bottom: 16px; align-items: center; }
+  .header-left { flex: 0 1 auto; min-width: 0; }
+  .greeting { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .header-right { gap: 8px; flex-wrap: nowrap; }
 
   .modal {
     width: 100vw;
@@ -1670,10 +1771,13 @@ kbd {
 
 @media (max-width: 480px) {
   .header-add-btn span { display: none; }
-  .header-add-btn { padding: 9px 12px; }
-  .current-date { font-size: 0.7rem; }
-  .greeting { font-size: 1rem; }
-  #main-area { padding: 12px; }
+  .header-add-btn { padding: 8px 10px; }
+  .current-date { display: none; }
+  .header-streak { font-size: 0.7rem; padding: 3px 7px; }
+  .greeting { font-size: 0.8rem; }
+  #main-area { padding: 10px; }
+  #right-column .mini-stats { grid-template-columns: repeat(4, 1fr); gap: 3px; }
+  #right-column { padding: 0 10px 12px; gap: 8px; }
   .task-card { padding: 10px 12px; }
   .task-card-footer { flex-direction: column; align-items: stretch; gap: 6px; }
   .task-card-footer > div:last-child { justify-content: flex-end; }
@@ -1758,11 +1862,15 @@ kbd {
           </div>
         </div>
         <div class="header-right">
+          <span class="header-streak" id="header-streak" title="Streak">🔥 <span id="header-streak-val">0</span></span>
           <button class="btn btn-primary header-add-btn" id="add-task-btn">
             <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/></svg>
-            New Task
+            <span>New Task</span>
           </button>
           <span class="current-date" id="current-date"></span>
+          <button class="header-stats-btn" id="header-stats-toggle" title="Stats">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg>
+          </button>
           <div class="header-avatar">U</div>
         </div>
       </header>
@@ -1784,6 +1892,10 @@ kbd {
     </div>
 
     <aside id="right-column">
+      <button class="stats-back-btn" id="stats-back-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
+        Back to Tasks
+      </button>
       <div class="mini-stats">
         <div class="mini-stat" id="bottom-streak">
           <span class="mini-stat-icon">🔥</span>
@@ -1806,6 +1918,10 @@ kbd {
           <span class="mini-stat-label">Achieve</span>
         </div>
       </div>
+      <button class="widget-toggle-btn" id="widget-toggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        More
+      </button>
       <div class="widget" id="widget-upcoming">
         <div class="widget-header">
           <span class="widget-title">Upcoming</span>
@@ -2708,6 +2824,7 @@ const App = (() => {
     const completed = all.filter(t => t.status === 'completed').length;
     const achievements = completed >= 10 ? Math.floor(completed / 10) : 0;
     setText('streak-val', streak);
+    setText('header-streak-val', streak);
     setText('focus-val', totalFocus);
     setText('done-val', completed);
     setText('achieve-val', achievements);
@@ -3332,6 +3449,33 @@ const App = (() => {
       backdrop?.classList.toggle('open');
     });
     backdrop?.addEventListener('click', closeSidebar);
+
+    // Widget toggle for compact mode
+    const widgetToggle = document.getElementById('widget-toggle');
+    widgetToggle?.addEventListener('click', () => {
+      const widgets = document.querySelectorAll('#right-column .widget');
+      const isExpanded = widgets[0]?.classList.contains('widget-expanded');
+      widgets.forEach(w => w.classList.toggle('widget-expanded', !isExpanded));
+      widgetToggle.textContent = isExpanded ? 'More' : 'Less';
+    });
+
+    // Mobile stats panel toggle
+    const statsToggle = document.getElementById('header-stats-toggle');
+    const rightCol = document.getElementById('right-column');
+    const mainArea = document.getElementById('main-area');
+    const statsBackBtn = document.getElementById('stats-back-btn');
+    function closeStats() {
+      rightCol?.classList.remove('stats-open');
+      mainArea?.classList.remove('stats-open');
+      statsToggle?.classList.remove('active');
+    }
+    statsToggle?.addEventListener('click', () => {
+      rightCol?.classList.toggle('stats-open');
+      mainArea?.classList.toggle('stats-open');
+      statsToggle.classList.toggle('active');
+    });
+    statsBackBtn?.addEventListener('click', closeStats);
+
     document.querySelectorAll('.sidebar-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         state.view = btn.dataset.view;
