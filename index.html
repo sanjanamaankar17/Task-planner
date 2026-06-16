@@ -3042,11 +3042,15 @@ const App = (() => {
             <input type="date" class="form-input" id="f-start" value="${todayStr()}">
           </div>
           <div class="form-group">
-            <label class="form-label" for="f-due">Due Date & Time</label>
-            <input type="datetime-local" class="form-input" id="f-due">
+            <label class="form-label" for="f-due">Due Date</label>
+            <input type="date" class="form-input" id="f-due">
           </div>
         </div>
         <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="f-due-time">Due Time</label>
+            <input type="time" class="form-input" id="f-due-time" value="23:00">
+          </div>
           <div class="form-group">
             <label class="form-label" for="f-priority">Priority</label>
             <select class="form-select" id="f-priority">
@@ -3142,11 +3146,15 @@ const App = (() => {
             <input type="date" class="form-input" id="f-start" value="${task.startDate || ''}">
           </div>
           <div class="form-group">
-            <label class="form-label" for="f-due">Due Date & Time</label>
-            <input type="datetime-local" class="form-input" id="f-due" value="${task.dueDate || ''}">
+            <label class="form-label" for="f-due">Due Date</label>
+            <input type="date" class="form-input" id="f-due" value="${task.dueDate ? task.dueDate.split('T')[0] : ''}">
           </div>
         </div>
         <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="f-due-time">Due Time</label>
+            <input type="time" class="form-input" id="f-due-time" value="${task.dueDate && task.dueDate.includes('T') ? task.dueDate.split('T')[1] : '23:00'}">
+          </div>
           <div class="form-group">
             <label class="form-label" for="f-priority">Priority</label>
             <select class="form-select" id="f-priority">
@@ -3230,8 +3238,9 @@ const App = (() => {
 
   function handleFormSubmit(e) {
     e.preventDefault();
-    let dueVal = document.getElementById('f-due').value;
-    if (dueVal && dueVal.endsWith('T00:00')) dueVal = dueVal.split('T')[0];
+    const dueDate = document.getElementById('f-due').value;
+    const dueTime = document.getElementById('f-due-time').value;
+    let dueVal = dueDate ? (dueTime ? dueDate + 'T' + dueTime : dueDate) : '';
     const data = {
       title: document.getElementById('f-title').value,
       notes: document.getElementById('f-notes').value,
