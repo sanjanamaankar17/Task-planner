@@ -2262,11 +2262,26 @@ const App = (() => {
     ] : [];
     showToast(body, type, { title, actions, duration: 6000 });
 
-    // OS notification
+    // OS notification with custom icon per type
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const icons = {
+      overdue: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#fee2e2"/><text x="32" y="44" text-anchor="middle" font-size="32">⏰</text></svg>'),
+      reminder: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#e0e7ff"/><text x="32" y="44" text-anchor="middle" font-size="32">🔔</text></svg>'),
+      summary: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#ecfdf5"/><text x="32" y="44" text-anchor="middle" font-size="32">📊</text></svg>'),
+      default: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#f0edff"/><text x="32" y="44" text-anchor="middle" font-size="32">✅</text></svg>')
+    };
+    const iconKey = tag?.startsWith('overdue') ? 'overdue' : tag?.startsWith('reminder') ? 'reminder' : tag?.startsWith('hourly') ? 'summary' : 'default';
     try {
-      const notif = new Notification(title, { body, tag, icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">📋</text></svg>' });
-      setTimeout(() => notif.close(), tag === 'hourly-summary' ? 8000 : 5000);
+      const notif = new Notification(title, {
+        body,
+        tag,
+        icon: icons[iconKey],
+        badge: icons[iconKey],
+        silent: false,
+        requireInteraction: tag?.startsWith('overdue')
+      });
+      notif.onclick = () => { window.focus(); if (taskId) openEditModal(taskId); notif.close(); };
+      if (!tag?.startsWith('overdue')) setTimeout(() => notif.close(), tag === 'hourly-summary' ? 8000 : 5000);
     } catch (e) { /* ignore */ }
     try {
       const reg = await navigator.serviceWorker.getRegistration();
@@ -2284,8 +2299,10 @@ const App = (() => {
       const due = new Date(t.dueDate.includes('T') ? t.dueDate : t.dueDate + 'T23:59');
       if (due <= now) {
         notifiedTasks.add(t.id);
-        const timeStr = t.dueDate.includes('T') ? ' at ' + t.dueDate.split('T')[1].slice(0, 5) : '';
-        sendNotif('Task Overdue!', `"${t.title}" was due ${formatDate(t.dueDate)}${timeStr}`, 'overdue-' + t.id);
+        const timeStr = t.dueDate.includes('T') ? t.dueDate.split('T')[1].slice(0, 5) : '';
+        const dueLabel = formatDate(t.dueDate);
+        const body = timeStr ? `${t.title}\n⏰ Due: ${dueLabel} at ${timeStr}` : `${t.title}\n📅 Due: ${dueLabel}`;
+        sendNotif('⚠️ Task Overdue', body, 'overdue-' + t.id);
       }
     });
   }
@@ -2302,8 +2319,8 @@ const App = (() => {
       const remindAt = new Date(t.reminder.includes('T') ? t.reminder : t.reminder + 'T23:59');
       if (remindAt <= now) {
         remindedTasks.add(t.id);
-        const timeStr = t.reminder.includes('T') ? ' at ' + t.reminder.split('T')[1].slice(0, 5) : '';
-        sendNotif('Task Reminder', `"${t.title}" reminder${timeStr}${t.dueDate ? ' — due ' + formatDate(t.dueDate) : ''}`, 'reminder-' + t.id);
+        const dueInfo = t.dueDate ? `\n📅 Due: ${formatDate(t.dueDate)}` : '';
+        sendNotif('🔔 Reminder', `${t.title}${dueInfo}`, 'reminder-' + t.id);
       }
     });
     clearRemindedCache();
