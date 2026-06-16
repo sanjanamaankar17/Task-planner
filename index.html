@@ -1525,7 +1525,6 @@ body {
   width: 100%;
   height: 3px;
   background: var(--primary);
-  animation: toastTimer var(--toast-duration, 3s) linear forwards;
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
@@ -2188,9 +2187,6 @@ const App = (() => {
         });
       });
     }
-    el.style.setProperty('--toast-duration', duration + 'ms');
-    el.querySelector('::after') // trigger reflow
-    setTimeout(() => removeToast(el), duration);
   }
 
   function removeToast(el) {
