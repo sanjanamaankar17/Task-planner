@@ -918,18 +918,21 @@ body {
 .important-btn.active { color: var(--accent-yellow); }
 
 .reschedule-input {
-  border: none;
-  background: none;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
   font-size: 0.72rem;
   font-family: var(--font);
   color: var(--primary);
   cursor: pointer;
   outline: none;
-  max-width: 150px;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
 }
 
-.reschedule-input::-webkit-calendar-picker-indicator { display: none; }
-.reschedule-input::-moz-calendar-picker-indicator { display: none; }
+.reschedule-input:focus { border-color: var(--primary); }
+
+.reschedule-date { max-width: 120px; }
+.reschedule-time { max-width: 80px; }
 
 .completed-separator {
   display: flex;
@@ -2940,7 +2943,8 @@ const App = (() => {
             ${spentHtml}
             ${reminderHtml}
             ${noNotifHtml}
-            <input type="datetime-local" class="reschedule-input" value="${task.dueDate || ''}" data-id="${task.id}" title="Reschedule">
+            <input type="date" class="reschedule-input reschedule-date" value="${task.dueDate ? task.dueDate.split('T')[0] : ''}" data-id="${task.id}" title="Reschedule date">
+            <input type="time" class="reschedule-input reschedule-time" value="${task.dueDate && task.dueDate.includes('T') ? task.dueDate.split('T')[1] : ''}" data-id="${task.id}" title="Reschedule time">
           </div>
           <div style="display:flex;align-items:center;gap:4px;">
             <button class="task-action-btn" data-id="${task.id}" data-action="edit" title="Edit">✎</button>
@@ -2964,9 +2968,22 @@ const App = (() => {
       sel.addEventListener('change', () => updateStatus(sel.dataset.id, sel.value));
     });
 
-    document.querySelectorAll('.reschedule-input').forEach(inp => {
+    document.querySelectorAll('.reschedule-date').forEach(inp => {
       inp.addEventListener('change', () => {
-        if (inp.value) rescheduleTask(inp.dataset.id, inp.value);
+        const id = inp.dataset.id;
+        const timeInp = inp.parentElement.querySelector('.reschedule-time');
+        const dateVal = inp.value;
+        const timeVal = timeInp?.value || '';
+        if (dateVal) rescheduleTask(id, timeVal ? dateVal + 'T' + timeVal : dateVal);
+      });
+    });
+    document.querySelectorAll('.reschedule-time').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const id = inp.dataset.id;
+        const dateInp = inp.parentElement.querySelector('.reschedule-date');
+        const dateVal = dateInp?.value || '';
+        const timeVal = inp.value;
+        if (dateVal) rescheduleTask(id, timeVal ? dateVal + 'T' + timeVal : dateVal);
       });
     });
 
