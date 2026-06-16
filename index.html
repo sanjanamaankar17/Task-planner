@@ -2283,10 +2283,6 @@ const App = (() => {
       notif.onclick = () => { window.focus(); if (taskId) openEditModal(taskId); notif.close(); };
       if (!tag?.startsWith('overdue')) setTimeout(() => notif.close(), tag === 'hourly-summary' ? 8000 : 5000);
     } catch (e) { /* ignore */ }
-    try {
-      const reg = await navigator.serviceWorker.getRegistration();
-      if (reg && reg.active) reg.active.postMessage({ title, body, tag });
-    } catch (e) { /* ignore */ }
   }
 
   function checkOverdueNotifs() {
